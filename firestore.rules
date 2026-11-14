@@ -1,0 +1,47 @@
+rules_version = '2';
+// STARK platform security rules.
+// The first Google account to sign in becomes the owner (director). The owner adds everyone else
+// on the People page; only those accounts can read or change STARK data.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function ownerPath() { return /databases/$(database)/documents/config/owner; }
+    function memberPath() { return /databases/$(database)/documents/members/$(myEmail()); }
+    function isOwner() { return signedIn() && exists(ownerPath()) && get(ownerPath()).data.uid == request.auth.uid; }
+    function isMember() { return signedIn() && (isOwner() || exists(memberPath())); }
+    function isDirector() { return isOwner() || (isMember() && get(memberPath()).data.role == 'director'); }
+
+    match /config/owner {
+      allow read: if signedIn();
+      allow create: if signedIn() && !exists(ownerPath())
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.keys().hasOnly(['uid', 'at']);
+      allow update, delete: if false;
+    }
+
+    match /members/{email} {
+      allow read: if isDirector() || (signedIn() && email == myEmail());
+      allow create, update: if isDirector()
+                    && request.resource.data.role in ['member', 'director']
+                    && request.resource.data.name is string;
+      allow delete: if isDirector();
+    }
+
+    // Platform data, one document per collection (items, missions, bookings, ...).
+    // Clearances, the clearance list, the team list and settings are director-only.
+    match /stark/{key} {
+      allow read: if isMember();
+      allow write: if isMember() && (isDirector() || !(key in ['clear', 'skills', 'team', 'config']));
+    }
+
+    match /smartlab_snaps/{day} {
+      allow read, write: if isDirector();
+    }
+
+    // Used only by the Ask STARK relay (server side). Nobody signs in to it directly.
+    match /askStarkUsage/{id} {
+      allow read, write: if false;
+    }
+  }
+}
