@@ -1,7 +1,7 @@
 {
   "name": "ask-stark-relay",
   "description": "Relay between the STARK platform and the Claude API",
-  "engines": { "node": "20" },
+  "engines": { "node": "22" },
   "main": "index.js",
   "scripts": { "test": "node test.js" },
   "dependencies": {
