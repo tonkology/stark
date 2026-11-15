@@ -206,7 +206,7 @@ const M=(c,o={})=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughnes
 const alu=M(0xB9BEC4,{metalness:.7,roughness:.35}),grey=M(0xD7D9DC,{roughness:.7}),dark=M(0x2b2f33),blue=M(0x1F5FD1);
 function box(w,h,d,m,x,y,z,p=scene){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;p.add(o);return o}
 function cyl(r,h,m,x,y,z,p=scene){const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,24),m);o.position.set(x,y,z);o.castShadow=true;p.add(o);return o}
-function label(t,s=1.6,col='#F3D9B0'){const c=document.createElement('canvas');c.width=512;c.height=96;const g=c.getContext('2d');g.font='600 44px Inter, sans-serif';g.fillStyle=col;g.textAlign='center';g.textBaseline='middle';g.fillText(t,256,48);const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,depthTest:false}));sp.scale.set(s,s*0.1875,1);return sp}
+function label(t,s=1.6,col='#F3D9B0'){const c=document.createElement('canvas');c.width=512;c.height=96;const g=c.getContext('2d');g.font='600 44px Inter, sans-serif';const tw=g.measureText(t).width+40;g.fillStyle='rgba(23,14,16,.85)';g.beginPath();g.roundRect?g.roundRect(256-tw/2,14,tw,68,34):g.rect(256-tw/2,14,tw,68);g.fill();g.fillStyle=col;g.textAlign='center';g.textBaseline='middle';g.fillText(t,256,48);const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,depthTest:false}));sp.scale.set(s,s*0.1875,1);return sp}
 const floor=box(30,0.2,18,M(0xE9E9E9,{roughness:.95}),0,-0.1,0);floor.receiveShadow=true;
 // conveyor track: two rails along path + belt surface
 {const shape=[];const N=PTS.length;const g=new THREE.BufferGeometry();const pos=[],idx=[];
