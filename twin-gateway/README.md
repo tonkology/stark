@@ -23,4 +23,4 @@ Open https://stark-91dfe.web.app/twin in Chrome on the same computer, go to the 
 ## Status
 
 - Tested: reading inputs, outputs and drive words from a simulated S7 server, and the page's live view with `--demo`.
-- Not tested: a real S7-300. The drive words (PIW/PQW 256+) are peripheral addresses, and whether they can be read this way depends on the CPU's process-image size. If they read as zero, the PLC program should copy them to a data block and the map should point there.
+- Not tested: a real S7-300. The drive words (PIW/PQW 256+) are peripheral addresses, and whether they can be read this way depends on the CPU's process-image size. If they read as zero, the PLC program has to copy them to a data block, and the gateway needs data-block reading added (it only reads I and Q addresses today).
