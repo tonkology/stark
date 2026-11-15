@@ -735,7 +735,9 @@ function frame(now){
   hmiT+=dt; if(hmiT>0.25){hmiT=0;drawHmi()}
   ctl.update(); renderer.render(scene,cam); requestAnimationFrame(frame);
 }
-log('Twin started. Press RESET, then START, then add parts','i');
+log('Demo: the twin homes, starts and feeds parts by itself','i');
+setTimeout(()=>press('reset'),800);
+setTimeout(()=>{press('start');S.autoFeed=true;S.feedT=0;$('autoFeed').textContent='Auto feed: on'},2200);
 requestAnimationFrame(frame);
 </script>
 </body>
