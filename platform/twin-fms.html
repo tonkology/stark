@@ -96,7 +96,7 @@ td{padding:5px 4px;border-bottom:1px solid #2a1c1e}
       <div id="oList"></div>
       <h3>How a part flows</h3>
       <div class="note">
-        <b>1 Distribution</b> puts a cylinder body on an empty pallet. <b>2 Testing</b> checks height and colour. <b>3 Processing</b> drills and checks the bore. <b>4 Robot Assembly</b> fits piston, spring and cap. <b>5 AS/RS</b> stores stock orders or retrieves parts from stock. <b>6 Handling</b> takes finished or rejected parts off the pallet. <b>7 Sorting</b> sorts them by colour, rejects to their own chute.<br>Each pallet carries its order on its ID tag, so each station knows whether to work on it or let it pass.
+        <b>A Distribution</b> puts a cylinder body on an empty pallet. <b>C Testing</b> checks height and colour. <b>B Processing</b> drills and checks the bore. <b>D Robot Assembly</b> fits piston, spring and cap. <b>E AS/RS</b> stores stock orders or retrieves parts from stock. <b>F Handling</b> takes finished or rejected parts off the pallet. <b>F Sorting</b> sorts them by colour, rejects to their own chute.<br>Letters follow the FESTO MPS 500 layout. G is the transfer system. Each pallet carries its order on its ID tag, so each station knows whether to work on it or let it pass.
       </div>
       <h3>Event log</h3>
       <div id="log"></div>
@@ -148,7 +148,7 @@ const $=id=>document.getElementById(id);
 const COL={red:0xC0262D,silver:0xC9CED6,black:0x1b1b1d};
 const CSS={red:'#C0262D',silver:'#C9CED6',black:'#2a2a2d'};
 /* ---------- loop path (rounded rectangle) ---------- */
-const A=1.5,B=4.6,RC=0.35,PTS=[];const CAP=30;
+const A=1.5,B=4.6,RC=0.14,PTS=[];const CAP=30;
 (function(){const add=(x,z)=>PTS.push([x,z]);
  for(let i=0;i<120;i++)add(-A+RC+(2*(A-RC))*i/120,B);
  for(let i=0;i<30;i++){const a=Math.PI/2-Math.PI/2*i/30;add(A-RC+RC*Math.cos(a),B-RC+RC*Math.sin(a))}
@@ -167,13 +167,13 @@ function sOf(x,z){let best=0,bd=1e9;for(let i=0;i<PTS.length;i++){const d=Math.h
 
 /* ---------- stations ---------- */
 const ST=[
- {k:'dist',n:'Distribution',x:-A,z:-3.3,ct:4},
- {k:'test',n:'Testing',x:-A,z:-1.45,ct:3},
- {k:'proc',n:'Processing',x:-A,z:2.4,ct:5},
- {k:'assy',n:'Robot Assembly',x:A,z:2.0,ct:9,w:2.4},
- {k:'asrs',n:'AS/RS',x:A,z:-2.3,ct:6},
- {k:'hand',n:'Handling',x:-A,z:0.45,ct:4,w:1.6},
- {k:'sort',n:'Sorting',x:-A,z:0.45,ct:3,off:4.1,w:1.6},
+ {k:'dist',n:'Distribution',L:'A',x:0,z:-B,ct:4,w:2.4},
+ {k:'test',n:'Testing',L:'C',x:-A,z:3.1,ct:3,w:1.4},
+ {k:'proc',n:'Processing',L:'B',x:-A,z:-0.6,ct:5,w:2.6},
+ {k:'assy',n:'Robot Assembly',L:'D',x:A,z:3.2,ct:9,w:2.0},
+ {k:'asrs',n:'AS/RS',L:'E',x:A,z:-0.5,ct:6},
+ {k:'hand',n:'Handling',L:'F',x:A,z:-3.4,ct:4,w:1.6},
+ {k:'sort',n:'Sorting',L:'F',x:A,z:-3.4,ct:3,off:3.05,w:1.4},
 ];
 ST.forEach((s,i)=>{s.i=i;s.s=sOf(s.x,s.z);s.busy=0;s.pal=null;s.t=0;s.work=0;s.done=0;s.state='idle'});
 
@@ -197,7 +197,7 @@ for(let i=0;i<7;i++)SIM.stock.push(['red','silver','black'][i%3]);
 const view=$('view');
 const R3=new THREE.WebGLRenderer({antialias:true});R3.setPixelRatio(Math.min(devicePixelRatio,2));R3.shadowMap.enabled=true;R3.outputEncoding=THREE.sRGBEncoding;view.prepend(R3.domElement);
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x120A0B);scene.fog=new THREE.Fog(0x120A0B,30,60);
-const cam=new THREE.PerspectiveCamera(40,1,0.1,200);cam.position.set(8.5,9,11.5);
+const cam=new THREE.PerspectiveCamera(40,1,0.1,200);cam.position.set(-9,8.5,10);
 const ctl=new THREE.OrbitControls(cam,R3.domElement);ctl.target.set(-0.3,0.9,0);ctl.enableDamping=true;ctl.maxPolarAngle=1.5;ctl.minDistance=6;ctl.maxDistance=40;
 scene.add(new THREE.HemisphereLight(0xfff2e6,0x2a1416,0.6));
 const sun=new THREE.DirectionalLight(0xffffff,0.85);sun.position.set(6,14,8);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-14,right:14,top:14,bottom:-14});scene.add(sun);
@@ -208,17 +208,15 @@ function box(w,h,d,m,x,y,z,p=scene){const o=new THREE.Mesh(new THREE.BoxGeometry
 function cyl(r,h,m,x,y,z,p=scene){const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,24),m);o.position.set(x,y,z);o.castShadow=true;p.add(o);return o}
 function label(t,s=1.6,col='#F3D9B0'){const c=document.createElement('canvas');c.width=512;c.height=96;const g=c.getContext('2d');g.font='600 44px Inter, sans-serif';const tw=g.measureText(t).width+40;g.fillStyle='rgba(23,14,16,.85)';g.beginPath();g.roundRect?g.roundRect(256-tw/2,14,tw,68,34):g.rect(256-tw/2,14,tw,68);g.fill();g.fillStyle=col;g.textAlign='center';g.textBaseline='middle';g.fillText(t,256,48);const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,depthTest:false}));sp.scale.set(s,s*0.1875,1);return sp}
 const floor=box(30,0.2,18,M(0xE9E9E9,{roughness:.95}),0,-0.1,0);floor.receiveShadow=true;
-// conveyor track: two rails along path + belt surface
-{const shape=[];const N=PTS.length;const g=new THREE.BufferGeometry();const pos=[],idx=[];
- for(let i=0;i<=N;i++){const p=PTS[i%N],q=PTS[(i+1)%N];const h=Math.atan2(q[1]-p[1],q[0]-p[0]);const nx=-Math.sin(h),nz=Math.cos(h);
-   pos.push(p[0]+nx*0.42,0.62,p[1]+nz*0.42, p[0]-nx*0.42,0.62,p[1]-nz*0.42);
-   if(i<N){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2)}}
- g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
- const belt=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:0x1d1d1f,roughness:.9,side:THREE.DoubleSide}));belt.receiveShadow=true;scene.add(belt);
- const rail=(off)=>{const pts=[];for(let i=0;i<=N;i+=2){const p=PTS[i%N],q=PTS[(i+1)%N];const h=Math.atan2(q[1]-p[1],q[0]-p[0]);pts.push(new THREE.Vector3(p[0]-Math.sin(h)*off,0.66,p[1]+Math.cos(h)*off))}
-   const tube=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,true),400,0.05,6,true),alu);tube.castShadow=true;scene.add(tube)};
- rail(0.48);rail(-0.48);
- for(let i=0;i<N;i+=25){const p=PTS[i];box(0.1,0.6,0.1,alu,p[0],0.3,p[1])}}
+// conveyor track: two long belt modules + two short transverse modules (square corners, like the real G transfer system)
+{const N=PTS.length;const bm=new THREE.MeshStandardMaterial({color:0x1d1d1f,roughness:.9});
+ const seg=(x,z,w,d)=>{box(w,0.05,d,bm,x,0.955,z);};
+ seg(-A,0,0.84,2*B+0.84);seg(A,0,0.84,2*B+0.84);seg(0,B,2*A,0.84);seg(0,-B,2*A,0.84);
+ const rl=(x,z,w,d)=>box(w,0.07,d,alu,x,1.0,z);
+ [-1,1].forEach(sx=>{rl(sx*(A+0.45),0,0.05,2*B+0.95);rl(sx*(A-0.45),0,0.05,2*B-0.95)});
+ [-1,1].forEach(sz=>{rl(0,sz*(B+0.45),2*A+0.95,0.05);rl(0,sz*(B-0.45),2*A-0.95,0.05)});
+ for(let i=0;i<N;i+=25){const p=PTS[i];box(0.1,0.95,0.1,alu,p[0],0.47,p[1])}
+ [-1,1].forEach(sx=>[-0.5,0.5].forEach(d=>box(0.06,0.16,2*(B-RC),alu,sx*A+d,0.88,0)));[-1,1].forEach(sz=>box(2*(A-RC)+0.9,0.16,0.06,alu,0,0.88,sz*(B+0.5)))}
 // stations (layout follows the Lab 5 photo: narrow loop, robot front-right, AS/RS rear-right, MPS stations on the left)
 const stObj=[];const white=M(0xF1F1EF,{roughness:.45});
 ST.forEach(s=>{const p=at(s.s);const nx=-Math.sin(p.h),nz=Math.cos(p.h);
@@ -231,7 +229,8 @@ ST.forEach(s=>{const p=at(s.s);const nx=-Math.sin(p.h),nz=Math.cos(p.h);
    const piv=new THREE.Group();piv.position.set(-0.2,1.15,0.1);g.add(piv);box(0.12,0.1,1.2,blue,0,0,-0.5,piv);cyl(0.07,0.12,M(0x333333),0,0,-1.05,piv);o.swing=piv}
  else if(s.k==='test'){box(0.4,0.35,0.4,M(0x444a50),0.3,1.08,0.1,g);box(0.07,1.3,0.07,alu,-0.2,1.5,-0.45,g);box(0.07,0.07,0.75,alu,-0.2,2.12,-0.8,g);o.head=box(0.22,0.3,0.22,blue,-0.2,1.75,-1.12,g);o.hy=1.75}
  else if(s.k==='proc'){o.turn=new THREE.Group();o.turn.position.set(0,0.95,-0.1);g.add(o.turn);cyl(0.5,0.05,alu,0,0,0,o.turn);for(let k=0;k<6;k++){const a=k*Math.PI/3;box(0.25,0.05,0.18,alu,Math.cos(a)*0.55,0,Math.sin(a)*0.55,o.turn).rotation.y=-a;cyl(0.07,0.12,M(0x1F5FD1),Math.cos(a)*0.55,0.08,Math.sin(a)*0.55,o.turn)}
-   box(0.08,1.2,0.08,alu,0.55,1.5,0.35,g);box(0.08,0.08,0.5,alu,0.55,2.1,0.12,g);o.head=cyl(0.08,0.4,M(0x666b70,{metalness:.8}),0.55,1.8,-0.1,g);o.hy=1.8}
+   box(0.08,1.2,0.08,alu,0.55,1.5,0.35,g);box(0.08,0.08,0.5,alu,0.55,2.1,0.12,g);o.head=cyl(0.08,0.4,M(0x666b70,{metalness:.8}),0.55,1.8,-0.1,g);o.hy=1.8;
+   [-0.25,0.25].forEach(z=>box(0.08,1.6,0.08,alu,-0.95,1.7,z,g));box(0.08,0.12,0.6,alu,-0.95,2.5,0,g);box(0.08,0.08,1.6,alu,-0.95,2.4,-0.75,g);box(0.12,0.5,0.12,blue,-0.95,2.05,-1.3,g)}
  else if(s.k==='assy'){ // Mitsubishi RV-type 6-axis arm, white
    cyl(0.07,0.6,blue,0.6,1.2,0.35,g);cyl(0.07,0.6,blue,0.75,1.2,0.35,g);box(0.3,0.3,0.25,M(0x9aa0a6),-0.55,1.05,0.35,g);
    const b=new THREE.Group();b.position.set(0,0.9,0.15);g.add(b);cyl(0.24,0.3,white,0,0.15,0,b);
@@ -239,27 +238,30 @@ ST.forEach(s=>{const p=at(s.s);const nx=-Math.sin(p.h),nz=Math.cos(p.h);
    const l1=new THREE.Group();l1.position.y=0.3;tur.add(l1);box(0.2,0.75,0.24,white,0,0.37,0,l1);
    const l2=new THREE.Group();l2.position.y=0.72;l1.add(l2);box(0.18,0.18,0.62,white,0,0,-0.28,l2);
    const wr=new THREE.Group();wr.position.z=-0.6;l2.add(wr);cyl(0.06,0.2,M(0xdddddd),0,-0.1,0,wr);box(0.12,0.08,0.06,M(0x333333),0,-0.22,0,wr);
-   o.base=tur;o.l1=l1;o.l2=l2;o.wr=wr}
+   o.base=tur;o.l1=l1;o.l2=l2;o.wr=wr;
+   box(W,0.85,1.2,grey,0,0.425,1.3,g);box(W+0.05,0.06,1.25,alu,0,0.88,1.3,g);box(0.7,0.45,0.5,M(0x3a3f45),-0.45,0.35,1.75,g);box(0.18,0.18,0.04,M(0xd00000),-0.45,0.45,2.01,g);
+   const ch=box(0.3,0.04,0.8,alu,-0.7,1.05,0.3,g);ch.rotation.x=0.2;cyl(0.09,0.5,blue,0.55,1.15,1.3,g)}
  else if(s.k==='asrs'){ // high-bay rack with XZ gantry on top
    const rk=new THREE.Group();rk.position.set(0,0,0.45);g.add(rk);o.cells=[];
-   [-1.25,1.25].forEach(x=>[0,0.6].forEach(z=>box(0.07,3.2,0.07,alu,x,1.6,z,rk)));
-   for(let r=0;r<5;r++){box(2.55,0.04,0.65,M(0xC9B79C,{roughness:.8}),0,0.6+r*0.55,0.3,rk);for(let c=0;c<6;c++){const m=cyl(0.09,0.16,M(0x333333),-1.0+c*0.4,0.7+r*0.55,0.3,rk);m.visible=false;o.cells.push(m)}}
-   box(2.7,0.08,0.08,dark,0,3.25,-0.25,rk);o.shuttle=new THREE.Group();rk.add(o.shuttle);box(0.09,1.4,0.09,M(0x2b2f33),0,2.5,-0.25,o.shuttle);box(0.25,0.15,0.25,blue,0,1.8,-0.25,o.shuttle);
-   box(2.7,0.85,0.5,grey,0,0.42,-0.55,g)}
+   [-1.85,0,1.85].forEach(x=>[0,0.6].forEach(z=>box(0.07,3.3,0.07,alu,x,1.65,z,rk)));
+   for(let r=0;r<5;r++){box(3.75,0.04,0.65,M(0xD8D2C4,{roughness:.8}),0,0.85+r*0.55,0.3,rk);for(let c=0;c<6;c++){box(0.42,0.04,0.42,M(0xEDEEEF),-1.5+c*0.6,0.89+r*0.55,0.3,rk);const m=cyl(0.09,0.16,M(0x333333),-1.5+c*0.6,0.99+r*0.55,0.3,rk);m.visible=false;o.cells.push(m)}}
+   box(3.9,0.08,0.08,dark,0,3.35,-0.25,rk);box(3.6,0.12,0.12,M(0x111111),0,3.45,-0.1,rk);o.shuttle=new THREE.Group();rk.add(o.shuttle);box(0.09,1.4,0.09,M(0x2b2f33),0,2.5,-0.25,o.shuttle);box(0.25,0.15,0.25,blue,0,1.8,-0.25,o.shuttle);
+   box(3.9,0.85,0.5,grey,0,0.42,-0.55,g)}
  else if(s.k==='hand'){ // pick&place gantry reaching over the conveyor to the sorting station behind
-   [-0.6,0.6].forEach(x=>box(0.09,1.5,0.09,alu,x,1.6,0.0,g));box(0.09,0.09,4.3,alu,0,2.35,0.45,g);box(1.3,0.09,0.09,alu,0,2.35,0,g);
+   [-0.6,0.6].forEach(x=>box(0.09,1.5,0.09,alu,x,1.6,0.0,g));box(0.09,0.09,3.5,alu,0,2.35,0.05,g);box(1.3,0.09,0.09,alu,0,2.35,0,g);
    o.car=new THREE.Group();g.add(o.car);box(0.18,0.18,0.18,M(0x2b2f33),0,2.35,0,o.car);o.head=box(0.07,0.7,0.07,alu,0,1.9,0,o.car);o.hy=1.9;box(0.16,0.08,0.16,blue,0,1.5,0,o.car)}
  else if(s.k==='sort'){o.slides=[];for(let i=0;i<4;i++){const sl=box(0.32,0.04,0.9,i===3?M(0x7A0C14):alu,-0.6+i*0.4,1.0,0.25,g);sl.rotation.x=0.25;o.slides.push(sl)}
    box(W-0.1,0.06,0.3,M(0x1d1d1f),0,0.95,-0.4,g);o.head=box(0.16,0.16,0.16,blue,0,1.3,-0.4,g);o.hy=1.3}
  o.lamp=new THREE.Mesh(new THREE.SphereGeometry(0.1,16,12),new THREE.MeshStandardMaterial({color:0x444444,emissive:0x000000}));
- const ly=s.k==='asrs'?3.5:2.2;o.lamp.position.set(s.k==='asrs'?1.25:0.75,ly,0.6);g.add(o.lamp);
- const lb=label(`${s.i+1}  ${s.n}`,2.4);lb.position.set(0,s.k==='asrs'?4.0:2.75,0.3);g.add(lb);
+ const ly=s.k==='asrs'?3.7:2.2;o.lamp.position.set(s.k==='asrs'?1.85:0.75,ly,0.6);g.add(o.lamp);
+ const lb=label(`${s.L} · ${s.n}`,2.4);lb.position.set(0,s.k==='asrs'?4.2:2.75,0.3);g.add(lb);
  stObj.push(o)});
 // conveyor control cabinet at the front end + PC desk (as in the lab)
-box(2.6,1.55,1.0,M(0xE4E6E8),0,0.78,B+0.95);box(1.9,0.9,0.02,M(0x4a7a9a,{transparent:true,opacity:.55}),0,0.75,B+1.46);
-[0xc62828,0x888888,0x888888,0xc62828,0x2ea043].forEach((c,i)=>cyl(0.06,0.05,M(c),-0.6+i*0.25,1.42,B+1.47).rotation.x=Math.PI/2);
-box(0.18,0.18,0.05,M(0xF2C200),0.75,1.42,B+1.47);
-box(2.0,0.06,1.2,M(0xF4F4F4),-2.9,1.05,B+1.2);box(0.9,0.6,0.05,M(0x111111),-2.9,1.45,B+1.0);box(0.7,0.7,0.6,M(0x222222),-2.9,0.4,B+1.2);
+box(2*A+0.5,0.9,1.5,M(0xE4E6E8),0,0.45,B+0.15);box(2*A-0.3,0.55,0.02,M(0x4a7a9a,{transparent:true,opacity:.6}),0,0.36,B+0.91);box(0.3,0.25,0.03,M(0xF2C200),0.4,0.33,B+0.92);
+[0xc62828,0xdddddd,0x999999,0xc62828,0x2ea043].forEach((c,i)=>cyl(0.07,0.05,M(c),-1.25+i*0.42,0.8,B+0.92).rotation.x=Math.PI/2);
+box(0.24,0.24,0.04,M(0xF2C200),0.9,0.8,B+0.92);cyl(0.1,0.08,M(0xd00000),0.9,0.8,B+0.96).rotation.x=Math.PI/2;
+box(0.6,0.3,0.25,alu,0,1.05,B+0.75);
+box(2.2,0.06,1.4,M(0xF4F4F4),-3.3,1.02,B+0.4);box(0.85,0.55,0.05,M(0x111111),-3.0,1.4,B+0.1);box(0.6,0.03,0.2,M(0x222222),-3.6,1.06,B+0.6);box(0.6,0.75,0.65,M(0x222222),-3.6,0.4,B+0.4);cyl(0.11,0.24,M(0xC0262D),-2.6,1.17,B+0.75);
 // pallets
 let pallets=[];
 function makePallet(s){const g=new THREE.Group();scene.add(g);box(0.62,0.08,0.62,M(0xEDEEEF,{roughness:.5}),0,0.68,0,g);box(0.14,0.03,0.1,M(0x222222),0.24,0.73,0.2,g);cyl(0.26,0.04,M(0x1F5FD1),0,0.74,0,g);
@@ -277,7 +279,9 @@ function addPick(col){SIM.orders.push({id:++SIM.oid,col,dest:'ship',kind:'pick',
 /* ---------- station logic ---------- */
 function needs(st,p){const pt=p.part;
  switch(st.k){
-  case 'dist': return !pt && SIM.orders.some(o=>o.kind==='make'&&o.st==='queued');
+  case 'dist': {if(pt||!SIM.orders.some(o=>o.kind==='make'&&o.st==='queued'))return false;
+    const pick=SIM.orders.some(o=>o.kind==='pick'&&o.st==='queued'&&SIM.stock.includes(o.col));
+    return !(pick && (p.id+Math.floor(SIM.t/20))%2===0);} // leave some empty pallets free for AS/RS retrievals
   case 'test': return pt&&pt.stage==='body';
   case 'proc': return pt&&pt.stage==='tested';
   case 'assy': return pt&&pt.stage==='drilled';
@@ -335,7 +339,7 @@ function release(st,p){st.pal=null;p.hold=null;p.pass=st.i;p.passS=0}
 
 /* ---------- render sync ---------- */
 function sync(){
- for(const p of pallets){const a=at(p.s);p.g.position.set(a.x,0,a.z);p.g.rotation.y=-a.h;
+ for(const p of pallets){const a=at(p.s);p.g.position.set(a.x,0.36,a.z);p.g.rotation.y=-a.h;
   const pt=p.part;p.wp.visible=!!pt;if(pt){p.body.material.color.setHex(COL[pt.col]);p.body.material.metalness=pt.col==='silver'?0.85:0.1;
    p.hole.visible=['drilled','assembled'].includes(pt.stage)||(pt.stage==='nok'&&pt.o.why==='assembly failed');p.cap.visible=pt.stage==='assembled';p.nok.visible=pt.stage==='nok'}}
  const tt=SIM.t;
@@ -343,9 +347,9 @@ function sync(){
   const w=st.busy?Math.sin(tt*6):0;
   if(o.head&&st.k!=='hand')o.head.position.y=o.hy-Math.abs(w)*0.3;if(o.turn&&st.busy)o.turn.rotation.y+=0.01*SIM.speed;if(o.swing)o.swing.rotation.y=st.busy?Math.sin(tt*2)*1.4:0;
   if(st.k==='proc'&&st.busy)o.head.rotation.y+=0.5;
-  if(o.car){const ph=st.busy?(Math.sin(tt*1.6)+1)/2:0;o.car.position.z=-1.45+ph*(2.65+1.45)*(SIM.sortQ.length||(ST[6].busy)?1:0.0)+0;o.head.position.y=o.hy-(st.busy?Math.abs(Math.sin(tt*3.2))*0.3:0)}
+  if(o.car){const ph=st.busy?(Math.sin(tt*1.6)+1)/2:0;o.car.position.z=-1.45+ph*3.0;o.head.position.y=o.hy-(st.busy?Math.abs(Math.sin(tt*3.2))*0.3:0)}
   if(o.base){o.base.rotation.y=st.busy?Math.sin(tt*1.3)*1.1:0;o.l1.rotation.x=st.busy?-0.25+Math.sin(tt*2.1)*0.3:-0.15;o.l2.rotation.x=st.busy?0.25+Math.sin(tt*2.7)*0.25:0.35;o.wr.rotation.y+=st.busy?0.05:0}
-  if(o.shuttle){o.shuttle.position.x=st.busy?Math.sin(tt*1.1)*1.0:0;o.shuttle.position.y=st.busy?-0.6+Math.sin(tt*0.8)*0.6:0}
+  if(o.shuttle){o.shuttle.position.x=st.busy?Math.sin(tt*1.1)*1.5:0;o.shuttle.position.y=st.busy?-0.6+Math.sin(tt*0.8)*0.6:0}
   if(o.cells)o.cells.forEach((c,j)=>{const col=SIM.stock[j];c.visible=!!col;if(col){c.material.color.setHex(COL[col]);c.material.metalness=col==='silver'?.85:.1}});
   if(o.mag)o.mag.material.opacity=F.dist_mag?0.15:0.6;
  });}
@@ -358,7 +362,7 @@ $('autoOrd').onchange=e=>SIM.autoOrd=e.target.checked;
 $('bRun').onclick=()=>{SIM.run=!SIM.run;$('bRun').textContent=SIM.run?'Pause':'Run'};
 document.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{SIM.speed=+b.dataset.sp;document.querySelectorAll('[data-sp]').forEach(x=>x.classList.toggle('on',x===b))});
 $('np').oninput=e=>{setPallets(+e.target.value);$('npV').textContent=pallets.length};
-$('ctBox').innerHTML=ST.map(s=>`<div class="row" style="justify-content:space-between;margin-top:6px"><span style="font-size:12px">${s.i+1} ${s.n}</span><b class="mono" id="ctv${s.i}">${s.ct}s</b></div><input type="range" min="1" max="15" step="0.5" value="${s.ct}" data-ct="${s.i}">`).join('');
+$('ctBox').innerHTML=ST.map(s=>`<div class="row" style="justify-content:space-between;margin-top:6px"><span style="font-size:12px">${s.L} ${s.n}</span><b class="mono" id="ctv${s.i}">${s.ct}s</b></div><input type="range" min="1" max="15" step="0.5" value="${s.ct}" data-ct="${s.i}">`).join('');
 document.querySelectorAll('[data-ct]').forEach(r=>r.oninput=()=>{const s=ST[+r.dataset.ct];s.ct=+r.value;$('ctv'+s.i).textContent=s.ct+'s'});
 $('fList').innerHTML=FAULTS.map(f=>`<label class="fault"><input type="checkbox" data-f="${f.id}"><div><b>${f.name}</b><div class="d">${f.d}</div></div></label>`).join('');
 let mystery=null;
@@ -375,12 +379,12 @@ function ui(){
  $('pRun').textContent=SIM.run?'RUNNING':'PAUSED';$('pRun').style.color=SIM.run?'var(--ok)':'var(--gold)';
  const os=SIM.orders.filter(o=>o.st!=='done'&&o.st!=='rejected').slice(0,12).concat(SIM.orders.filter(o=>o.st==='done'||o.st==='rejected').slice(-4).reverse());
  $('oList').innerHTML=os.map(o=>`<div class="ord"><span class="sw2" style="background:${CSS[o.col]}"></span><span>#${o.id} ${o.kind==='pick'?'from stock':'make'} → ${o.dest}${o.why&&o.st==='rejected'?' · '+o.why:''}</span><span class="tag ${o.st==='in work'?'work':o.st==='rejected'?'down':o.st==='queued'?'wait':''}">${o.st}</span></div>`).join('')||'<div class="note">No orders. Release one above.</div>';
- $('stT').innerHTML=ST.map(s=>`<tr><td>${s.i+1} ${s.n}</td><td><span class="tag ${s.state==='working'?'work':s.state==='down'?'down':s.state==='waiting'?'wait':''}">${s.state}</span></td><td class="mono">${cycle(s).toFixed(1)}s</td><td class="mono">${s.done}</td></tr>`).join('');
+ $('stT').innerHTML=ST.map(s=>`<tr><td>${s.L} ${s.n}</td><td><span class="tag ${s.state==='working'?'work':s.state==='down'?'down':s.state==='waiting'?'wait':''}">${s.state}</span></td><td class="mono">${cycle(s).toFixed(1)}s</td><td class="mono">${s.done}</td></tr>`).join('');
  const hrs=SIM.t/3600;$('kDone').textContent=SIM.done;$('kTp').textContent=hrs>0.005?Math.round(SIM.done/hrs):0;
  $('kLead').textContent=SIM.leads.length?(SIM.leads.reduce((a,b)=>a+b,0)/SIM.leads.length).toFixed(0):'—';
  $('kFpy').textContent=SIM.tested?Math.round(100*(SIM.done)/(SIM.done+SIM.rej||1))+'%':'—';$('kRej').textContent=SIM.rej;$('kStock').textContent=SIM.stock.length+'/'+CAP;
  const u=ST.map(s=>SIM.t>0?s.work/SIM.t:0);const mx=Math.max(...u);const bi=u.indexOf(mx);
- $('uBars').innerHTML=ST.map((s,i)=>`<div class="row" style="justify-content:space-between;margin-top:6px;font-size:12px"><span>${s.i+1} ${s.n}</span></div><div class="bar ${i===bi&&mx>0.3?'bn':''}"><i style="width:${(u[i]*100).toFixed(0)}%"></i><span>${(u[i]*100).toFixed(0)}%</span></div>`).join('');
+ $('uBars').innerHTML=ST.map((s,i)=>`<div class="row" style="justify-content:space-between;margin-top:6px;font-size:12px"><span>${s.L} ${s.n}</span></div><div class="bar ${i===bi&&mx>0.3?'bn':''}"><i style="width:${(u[i]*100).toFixed(0)}%"></i><span>${(u[i]*100).toFixed(0)}%</span></div>`).join('');
  $('bnNote').innerHTML=mx>0.3?`<b>Bottleneck: ${ST[bi].n}</b> (${(mx*100).toFixed(0)}% busy). Line output is limited to about ${Math.round(3600/cycle(ST[bi]))} parts per hour by its ${cycle(ST[bi]).toFixed(1)} s cycle.`:'The station with the highest utilisation is the bottleneck.';
  $('chutes').innerHTML=['red','silver','black','reject'].map(k=>`<div class="stat"><b>${SIM.chute[k]}</b><span>${k}</span></div>`).join('');
 }
