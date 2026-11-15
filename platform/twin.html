@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>STARK Twin · MT AC</title>
+<link rel="icon" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0E0809;--panel:#170E10;--panel2:#1F1416;--line:#3A2629;--fg:#F3E9DF;--mut:#A8968E;
+  --red:#7A0C14;--red2:#A50F1A;--gold:#E8B04A;--ok:#4CC38A;--warn:#F2A33A;--bad:#E5484D;--blue:#3D8BFD;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 Inter,system-ui,sans-serif;overflow:hidden}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+header{height:54px;display:flex;align-items:center;gap:14px;padding:0 max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left));border-bottom:1px solid var(--line);background:linear-gradient(90deg,var(--red) 0,#3B070B 55%,var(--bg))}
+header .brand{font:800 18px Unbounded,sans-serif;letter-spacing:.06em;color:var(--gold)}
+header .sub{font-size:12px;color:#F3D9B0;opacity:.85}
+header .sp{flex:1}
+.pill{font:600 11px Inter;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:99px;border:1px solid var(--line);background:#0008}
+.pill.sim{color:var(--gold);border-color:#E8B04A66}
+main{position:absolute;top:54px;left:0;right:0;bottom:0;display:grid;grid-template-columns:minmax(0,1fr) 420px}
+#view{position:relative;min-width:0;min-height:0}
+#view canvas{display:block;width:100%;height:100%;cursor:grab}
+.hud{position:absolute;left:14px;top:12px;display:flex;gap:8px;flex-wrap:wrap;pointer-events:none}
+.hud .pill{pointer-events:auto}
+.legend{position:absolute;left:14px;bottom:12px;font-size:11px;color:var(--mut);background:#0009;padding:6px 10px;border-radius:8px;border:1px solid var(--line)}
+.feed{position:absolute;right:14px;bottom:12px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+aside{border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{flex:1;background:none;border:0;color:var(--mut);font:600 12px Inter;padding:12px 8px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button.on{color:var(--gold);border-bottom-color:var(--gold)}
+.pane{flex:1;overflow:auto;padding:14px 16px 24px;display:none}
+.pane.on{display:block}
+h3{font:600 11px Inter;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:18px 0 8px}
+h3:first-child{margin-top:0}
+button.b{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:600 13px Inter;cursor:pointer}
+button.b:hover{border-color:#E8B04A88}
+button.b:disabled{opacity:.4;cursor:not-allowed}
+button.start{background:#123D2A;border-color:#2D7A55}
+button.stop{background:#4A1013;border-color:#8A2228}
+button.reset{background:#1B2A44;border-color:#36507E}
+button.estop{background:var(--bad);border-color:#FFB4B6;color:#fff}
+button.estop.on{background:#3a0b0d;color:#ffb4b6}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+/* HMI */
+.hmi{background:#C9CDD2;border-radius:12px;padding:10px;box-shadow:inset 0 0 0 2px #9AA0A6}
+.hmi .scr{background:#E7EEF6;color:#10223A;border-radius:4px;padding:8px 10px;font:12px "JetBrains Mono",monospace;min-height:150px}
+.hmi .t{display:flex;justify-content:space-between;background:#2C5C9A;color:#fff;margin:-8px -10px 6px;padding:4px 10px;font-weight:600;border-radius:4px 4px 0 0}
+.hmi .msg{margin-top:6px;padding:4px 6px;border-radius:3px;background:#fff;min-height:22px}
+.hmi .msg.err{background:#FFD9D9;color:#8A0F14}
+.hmi .lbl{font:600 10px Inter;color:#3c4148;margin-top:6px;text-align:right;letter-spacing:.1em}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px}
+.kv span:nth-child(odd){color:#4a5a70}
+.lamps{display:flex;gap:14px;margin-top:10px}
+.lamp{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mut)}
+.lamp i{width:12px;height:12px;border-radius:50%;background:#333;box-shadow:inset 0 0 0 1px #0006}
+.lamp.on i{box-shadow:0 0 10px currentColor}
+.lamp.g.on i{background:var(--ok);color:var(--ok)}.lamp.w.on i{background:#fff;color:#fff}.lamp.r.on i{background:var(--bad);color:var(--bad)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{background:none;border:0;color:var(--mut);padding:8px 12px;font:600 12px Inter;cursor:pointer}
+.seg button.on{background:var(--gold);color:#2A1607}
+input[type=range]{width:100%;accent-color:var(--gold)}
+/* IO table */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;font:600 10px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);padding:6px 4px;border-bottom:1px solid var(--line)}
+td{padding:5px 4px;border-bottom:1px solid #2a1c1e;vertical-align:top}
+td.addr{font-family:"JetBrains Mono",monospace;color:var(--gold);white-space:nowrap}
+td.v{text-align:center;width:46px}
+.bit{display:inline-block;min-width:26px;padding:1px 6px;border-radius:5px;font:600 11px "JetBrains Mono";background:#2a1c1e;color:#806d68}
+.bit.on{background:#E8B04A;color:#2A1607}
+.bit.word{background:#1d2a3d;color:#9cc2ff}
+tr.forced td{background:#3a1416}
+.note{font-size:12px;color:var(--mut);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0}
+.note b{color:var(--fg)}
+/* faults */
+.fault{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid #2a1c1e}
+.fault input{margin-top:3px;accent-color:var(--bad)}
+.fault .d{font-size:12px;color:var(--mut)}
+.quiz{background:linear-gradient(135deg,#3B070B,#170E10);border:1px solid #E8B04A55;border-radius:12px;padding:12px}
+select{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px;font:13px Inter;width:100%}
+.res{margin-top:8px;font-size:13px}
+.res.ok{color:var(--ok)}.res.no{color:var(--bad)}
+/* telemetry */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.stat b{display:block;font:600 20px "JetBrains Mono";color:var(--fg)}
+.stat span{font-size:11px;color:var(--mut)}
+canvas#chart{width:100%;height:170px;background:var(--panel2);border:1px solid var(--line);border-radius:10px}
+#log{font:11px/1.6 "JetBrains Mono";color:var(--mut);max-height:220px;overflow:auto;background:#0c0708;border:1px solid var(--line);border-radius:10px;padding:8px}
+#log .e{color:#ff9a9d}#log .i{color:#F3D9B0}
+@media (max-width:900px){
+  body{overflow:auto}
+  main{position:static;display:block}
+  #view{height:56vh}
+  aside{border-left:0;border-top:1px solid var(--line)}
+  .pane{overflow:visible}
+  header .sub{display:none}
+  .legend{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">STARK</div>
+  <div class="sub">Digital Twin · Lab 3 · FESTO MPS MT AC transfer line</div>
+  <div class="sp"></div>
+  <span class="pill sim" id="srcPill">Layer 1 · Simulation</span>
+</header>
+<main>
+  <section id="view">
+    <div class="hud">
+      <span class="pill" id="stPill">NOT READY</span>
+      <span class="pill mono" id="hzPill">0.0 Hz</span>
+      <span class="pill" id="viewBtn" style="cursor:pointer">Engineer view: off</span>
+    </div>
+    <div class="feed">
+      <button class="b" data-feed="metal">+ Metal</button>
+      <button class="b" data-feed="red">+ Red</button>
+      <button class="b" data-feed="black">+ Black</button>
+      <button class="b" id="autoFeed">Auto feed: off</button>
+    </div>
+    <div class="legend">Drag to orbit · scroll to zoom · click the panel buttons on the station</div>
+  </section>
+  <aside>
+    <div class="tabs">
+      <button data-t="op" class="on">Operate</button>
+      <button data-t="io">I/O</button>
+      <button data-t="drv">Drive</button>
+      <button data-t="flt">Faults</button>
+      <button data-t="tel">Telemetry</button>
+    </div>
+
+    <div class="pane on" id="p-op">
+      <div class="hmi">
+        <div class="scr">
+          <div class="t"><span>MT AC · Overview</span><span id="hClock">00:00</span></div>
+          <div class="kv">
+            <span>Mode</span><b id="hMode">—</b>
+            <span>Step</span><b id="hStep">—</b>
+            <span>Belt</span><b id="hBelt">0.0 Hz · stop</b>
+            <span>Good</span><b id="hGood">0</b>
+            <span>Rejected</span><b id="hRej">0</b>
+          </div>
+          <div class="msg" id="hMsg">Press RESET to home the station</div>
+        </div>
+        <div class="lbl">SIMATIC PANEL · TP177B</div>
+      </div>
+
+      <div class="lamps">
+        <div class="lamp g" id="lStart"><i></i>H1 Start</div>
+        <div class="lamp w" id="lReset"><i></i>H2 Reset</div>
+        <div class="lamp r" id="lFault"><i></i>H3 Fault</div>
+      </div>
+
+      <h3>Control panel</h3>
+      <div class="grid2">
+        <button class="b start" id="bStart">START</button>
+        <button class="b stop" id="bStop">STOP</button>
+        <button class="b reset" id="bReset">RESET</button>
+        <button class="b estop" id="bEstop">E-STOP</button>
+      </div>
+      <h3>Key switch S4</h3>
+      <div class="seg" id="keySeg"><button data-k="auto" class="on">AUTO</button><button data-k="man">MANUAL</button></div>
+
+      <div id="manBox" hidden>
+        <h3>Manual jog (key in MANUAL, station ready)</h3>
+        <div class="row">
+          <button class="b" id="jRev">◀ Jog back</button>
+          <button class="b" id="jFwd">Jog fwd ▶</button>
+          <button class="b" id="jStop">Toggle stopper</button>
+        </div>
+        <div class="note">Hold the jog buttons. The drive runs at the jog setpoint (10 Hz).</div>
+      </div>
+
+      <h3>Operator</h3>
+      <div class="row">
+        <button class="b" id="bRemove" disabled>Remove reject at stopper</button>
+        <label class="row" style="gap:6px;color:var(--mut);font-size:12px"><input type="checkbox" id="autoOp" checked> Auto-operator removes rejects</label>
+      </div>
+
+      <h3>What the sequence does</h3>
+      <div class="note">
+        <b>1.</b> RESET homes the station: stopper out, drive acknowledged.<br>
+        <b>2.</b> START runs the belt when B1 sees a part.<br>
+        <b>3.</b> The stopper holds each part at B3 for 0.8 s while B2 (inductive) and B6 (optical) classify it.<br>
+        <b>4.</b> Metal and red pass to the next station. Black is rejected and waits for the operator.<br>
+        <b>5.</b> STOP ends at the next idle step. E-STOP cuts the drive (OFF2) and the spring-return stopper blocks the belt.
+      </div>
+    </div>
+
+    <div class="pane" id="p-io">
+      <div class="note"><b>CPU 313C-2DP</b> onboard I/O and PROFIBUS DP to the MICROMASTER 420. Addresses are the twin's map. Check them against the station's wiring list before you use them on the real PLC.</div>
+      <h3>Inputs</h3>
+      <table><thead><tr><th>Addr</th><th>Tag</th><th>Meaning</th><th>Val</th></tr></thead><tbody id="tIn"></tbody></table>
+      <h3>Outputs</h3>
+      <table><thead><tr><th>Addr</th><th>Tag</th><th>Meaning</th><th>Val</th></tr></thead><tbody id="tOut"></tbody></table>
+      <h3>PROFIBUS DP · MM420</h3>
+      <table><thead><tr><th>Addr</th><th>Tag</th><th>Meaning</th><th>Val</th></tr></thead><tbody id="tDp"></tbody></table>
+    </div>
+
+    <div class="pane" id="p-drv">
+      <h3>MICROMASTER 420 · setpoint</h3>
+      <div class="row" style="justify-content:space-between"><span>Auto speed</span><b class="mono" id="fsetV">35 Hz</b></div>
+      <input type="range" id="fset" min="10" max="50" step="1" value="35">
+      <div class="row" style="justify-content:space-between;margin-top:8px"><span>Ramp-up / ramp-down (P1120 / P1121)</span><b class="mono" id="rampV">0.8 s</b></div>
+      <input type="range" id="ramp" min="0.2" max="3" step="0.1" value="0.8">
+      <h3>Drive status</h3>
+      <div class="kv mono" style="font-size:12px">
+        <span>r0021 freq</span><b id="dF">0.0 Hz</b>
+        <span>r0027 current</span><b id="dI">0.00 A</b>
+        <span>r0035 motor temp</span><b id="dT">35 °C</b>
+        <span>STW1 (control)</span><b id="dStw">0000</b>
+        <span>ZSW1 (status)</span><b id="dZsw">0000</b>
+        <span>HSW (setpoint)</span><b id="dHsw">0000</b>
+        <span>Fault</span><b id="dFlt">—</b>
+      </div>
+      <div class="note"><b>STW1 047E</b> = ready (OFF1). <b>047F</b> = run forward. <b>0C7F</b> = run reverse. <b>04FE</b> = acknowledge a fault. HSW 4000 hex = 100% = 50 Hz.</div>
+      <h3>Layer 2 · live link</h3>
+      <div class="note">This is not connected to the real station yet. The CPU 313C-2DP has MPI and PROFIBUS ports but no Ethernet. To mirror the real line here we need:<br>
+      <b>1.</b> an MPI/PROFIBUS-to-Ethernet adapter on the CPU,<br>
+      <b>2.</b> a small gateway on a lab PC that reads the same addresses listed in the I/O tab and streams them to this page.<br>
+      The twin already runs on that address map, so the view stays the same when it goes live.</div>
+    </div>
+
+    <div class="pane" id="p-flt">
+      <div class="quiz">
+        <b style="color:var(--gold)">Mystery fault</b>
+        <div class="d" style="font-size:12px;color:var(--mut);margin:4px 0 10px">The twin injects a hidden fault. Run the line, read the I/O and the drive data, then name the fault.</div>
+        <div class="row"><button class="b" id="qStart">Inject mystery fault</button><button class="b" id="qGive" disabled>Reveal</button></div>
+        <div id="qBox" hidden style="margin-top:10px">
+          <select id="qSel"></select>
+          <div class="row" style="margin-top:8px"><button class="b" id="qCheck">Check answer</button></div>
+          <div class="res" id="qRes"></div>
+        </div>
+      </div>
+      <h3>Inject a fault</h3>
+      <div id="fList"></div>
+      <div class="note">Clear the fault, then press RESET to recover. This is the same order as on the real station.</div>
+    </div>
+
+    <div class="pane" id="p-tel">
+      <div class="stats">
+        <div class="stat"><b id="sGood">0</b><span>good parts</span></div>
+        <div class="stat"><b id="sRej">0</b><span>rejected</span></div>
+        <div class="stat"><b id="sTp">0.0</b><span>parts / min</span></div>
+        <div class="stat"><b id="sCyc">—</b><span>avg cycle s</span></div>
+        <div class="stat"><b id="sAv">—</b><span>availability</span></div>
+        <div class="stat"><b id="sE">0.00</b><span>energy Wh</span></div>
+      </div>
+      <h3>Drive · last 40 s</h3>
+      <canvas id="chart"></canvas>
+      <div class="row" style="gap:14px;font-size:11px;color:var(--mut);margin-top:6px"><span style="color:var(--gold)">━ frequency Hz</span><span style="color:#9cc2ff">━ current A ×20</span><span style="color:#ff9a9d">▮ fault</span></div>
+      <h3>Event log</h3>
+      <div id="log"></div>
+    </div>
+  </aside>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+"use strict";
+/* ============ CONSTANTS (scene units: 1 = 100 mm) ============ */
+const BELT_Y=1.15, R=0.2, H=0.25, X0=-3.55, X1=3.6;
+const SX={B1:-3.2,B3:0.77,B6:0.77,B2:0.77,B4:3.1}, STOP_X=1.0, FEED_X=-3.3, GAP=0.42, VMAX=1.0;
+const TYPES={metal:{c:0xC9CED6,m:0.9,r:0.25,ind:1,opt:1},red:{c:0xC0262D,m:0.05,r:0.5,ind:0,opt:1},black:{c:0x1b1b1d,m:0.05,r:0.6,ind:0,opt:0}};
+
+/* ============ STATE ============ */
+const S={
+  t:0, estop:false, key:'auto', state:'NOT_READY', step:'—', msg:'Press RESET to home the station', msgErr:false,
+  stopReq:false, stepT:0, measure:null, inTransit:0, lastProg:0, runOn:0, idleT:0,
+  stopper:1, partsSeen:0, good:0, goodM:0, goodR:0, rej:0, cycles:[], tLastGood:null,
+  autoFeed:false, feedT:0, autoOp:true, rejectT:0,
+  jog:0, jogStop:false, faultCause:null, upT:0, runT:0, faultT:0, energy:0,
+  pressure:6.0
+};
+const D={f:0,I:0,T:35,fset:35,ramp:0.8,fault:null,stw:0,zsw:0,hsw:0,dir:0,ack:false,overI:0};
+const IN={}, OUT={Q_retract:0,H1:0,H2:0,H3:0}, prevIN={};
+const F={}; // active faults
+let parts=[], pid=0, mystery=null, eng=false;
+
+const FAULTS=[
+ {id:'b1',name:'B1 entry sensor dead',d:'Light barrier at the entry never switches. Parts sit at the entry and the belt does not start.'},
+ {id:'b3',name:'B3 stuck ON',d:'The PLC thinks a part is always at the stopper.'},
+ {id:'b2',name:'B2 inductive sensor dead',d:'Metal is no longer recognised. Metal is sorted as red.'},
+ {id:'b6',name:'B6 optical sensor dirty',d:'The optical sensor sees nothing. Red parts are rejected as black.'},
+ {id:'jam',name:'Stopper cylinder jammed',d:'Valve switches but the cylinder does not retract. 1B2 never comes.'},
+ {id:'s1b2',name:'1B2 reed switch dead',d:'The stopper retracts but the end-position sensor never confirms.'},
+ {id:'air',name:'Compressed air low',d:'Supply drops to 2 bar. B7 pressure switch opens. The cylinder cannot move.'},
+ {id:'slip',name:'Belt slipping',d:'The drive runs normally but the belt moves at about a third of the speed.'},
+ {id:'block',name:'Belt mechanically blocked',d:'Something stops the belt. Current rises until the MM420 trips.'},
+ {id:'ot',name:'Motor overtemperature',d:'The motor PTC trips. MM420 fault F0011.'}
+];
+
+/* ============ THREE SCENE ============ */
+const view=document.getElementById('view');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputEncoding=THREE.sRGBEncoding;
+view.prepend(renderer.domElement);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x120A0B); scene.fog=new THREE.Fog(0x120A0B,22,45);
+const cam=new THREE.PerspectiveCamera(40,1,0.1,100); cam.position.set(5.5,6.2,9.5);
+const ctl=new THREE.OrbitControls(cam,renderer.domElement); ctl.target.set(0,1.6,-0.4); ctl.enableDamping=true; ctl.maxPolarAngle=1.52; ctl.minDistance=4; ctl.maxDistance=22;
+scene.add(new THREE.HemisphereLight(0xfff2e6,0x2a1416,0.55));
+const sun=new THREE.DirectionalLight(0xffffff,0.9); sun.position.set(4,10,6); sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-8,right:8,top:8,bottom:-8}); scene.add(sun);
+const rim=new THREE.DirectionalLight(0xE8B04A,0.35); rim.position.set(-6,4,-6); scene.add(rim);
+
+const M=(c,o={})=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.55,metalness:.2},o));
+const alu=M(0xB9BEC4,{metalness:.7,roughness:.35}), dark=M(0x2b2f33), grey=M(0xD7D9DC,{roughness:.7}), blue=M(0x1F5FD1,{roughness:.4});
+function box(w,h,d,mat,x,y,z,p=scene){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;p.add(m);return m}
+function cyl(r,h,mat,x,y,z,rot,p=scene){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,28),mat);m.position.set(x,y,z);if(rot)m.rotation[rot[0]]=rot[1];m.castShadow=true;p.add(m);return m}
+
+// floor/table
+const table=box(13,0.3,6,M(0xEDEDED,{roughness:.9}),0,-0.15,-0.4); table.receiveShadow=true;
+const grid=new THREE.GridHelper(13,26,0x3a2629,0x2a1c1e); grid.position.y=0.005; grid.material.opacity=.0; grid.material.transparent=true; scene.add(grid);
+
+// base housing (front panel area)
+box(6.2,0.9,1.2,grey,0,0.45,0.15);
+box(6.3,0.06,1.3,alu,0,0.93,0.15);
+// conveyor frame + belt
+box(7.3,0.16,0.08,alu,0,1.05,0.46); box(7.3,0.16,0.08,alu,0,1.05,-0.46);
+const beltTexC=document.createElement('canvas'); beltTexC.width=256; beltTexC.height=32;
+{const g=beltTexC.getContext('2d'); g.fillStyle='#161616'; g.fillRect(0,0,256,32); g.fillStyle='#262626'; for(let i=0;i<256;i+=16) g.fillRect(i,0,6,32);}
+const beltTex=new THREE.CanvasTexture(beltTexC); beltTex.wrapS=THREE.RepeatWrapping; beltTex.repeat.set(8,1);
+const belt=box(7.2,0.06,0.84,new THREE.MeshStandardMaterial({map:beltTex,roughness:.85}),0,BELT_Y-0.03,0);
+cyl(0.09,0.9,alu,X0,BELT_Y-0.09,0,['x',Math.PI/2]); cyl(0.09,0.9,alu,X1,BELT_Y-0.09,0,['x',Math.PI/2]);
+// end caps (black like photo)
+[-2.8,2.8].forEach(x=>{box(0.5,0.18,1.05,dark,x,1.24,0)});
+// low guide rails
+box(7.0,0.05,0.03,alu,0,1.3,0.47); box(4.0,0.05,0.03,alu,-1.5,1.3,-0.47);
+// motor + gearbox at the right end (front)
+const motor=cyl(0.22,0.6,M(0x6f7880,{metalness:.5}),X1,0.9,0.85,['x',Math.PI/2]);
+box(0.4,0.35,0.3,M(0x5d6670),X1,0.9,0.55);
+// legs
+[[-3,0.6],[3,0.6],[-3,-0.3],[3,-0.3]].forEach(([x,z])=>box(0.08,0.9,0.08,alu,x,0.45,z));
+
+// tower frame + HMI
+const tw=[-2.2,2.2]; tw.forEach(x=>box(0.12,5.6,0.12,alu,x,2.8,-1.7));
+[1.2,3.1,4.0,4.9,5.55].forEach(y=>box(4.5,0.1,0.12,alu,0,y,-1.7));
+box(1.9,1.55,0.08,M(0xEEF0F2),0,4.25,-1.62);
+const hmiC=document.createElement('canvas'); hmiC.width=320; hmiC.height=240; const hmiG=hmiC.getContext('2d');
+const hmiTex=new THREE.CanvasTexture(hmiC);
+const hmiScr=new THREE.Mesh(new THREE.PlaneGeometry(1.15,0.86),new THREE.MeshBasicMaterial({map:hmiTex})); hmiScr.position.set(0,4.4,-1.575); scene.add(hmiScr);
+// PLC rack (S7-300) + FESTO I/O box
+box(1.8,0.6,0.6,grey,-1.5,1.3,-1.1);
+const plcG=new THREE.Group(); plcG.position.set(-1.55,1.95,-1.1); scene.add(plcG);
+box(1.5,0.08,0.3,alu,0,-0.35,0,plcG);
+[[-0.5,0.32],[-0.15,0.3],[0.2,0.3]].forEach(([x,w])=>box(w,0.62,0.42,M(0x2E3236),x,0,0,plcG));
+const plcLeds=[]; for(let i=0;i<16;i++){const l=box(0.03,0.025,0.01,M(0x0d3b1e,{emissive:0x000000}),0.12+(i%2)*0.08,0.22-Math.floor(i/2)*0.05,0.215,plcG);plcLeds.push(l)}
+const runLed=box(0.04,0.03,0.01,M(0x111111),-0.55,0.2,0.215,plcG), sfLed=box(0.04,0.03,0.01,M(0x111111),-0.55,0.13,0.215,plcG);
+// MM420
+const mm=new THREE.Group(); mm.position.set(1.4,1.95,-1.2); scene.add(mm);
+box(0.55,0.8,0.4,M(0x26292d),0,0,0,mm); box(0.4,0.22,0.02,M(0x37526b,{emissive:0x0a1a2a}),0,0.2,0.21,mm);
+const mmLed=box(0.06,0.04,0.02,M(0x111111),0.18,-0.2,0.21,mm);
+// pneumatic service unit
+cyl(0.08,0.35,M(0x9aa5b1),2.6,1.6,-1.5); cyl(0.12,0.08,M(0x333),2.6,1.85,-1.5);
+
+// front control panel buttons (raycast)
+const clickables=[];
+function pb(color,x,name,em){const g=new THREE.Group();g.position.set(x,0.55,0.77);scene.add(g);
+  box(0.26,0.26,0.04,M(0xdddddd),0,0,0,g); const cap=cyl(0.09,0.06,M(color,{emissive:0x000000}),0,0,0.04,['x',Math.PI/2],g);
+  cap.userData.btn=name; clickables.push(cap); return cap;}
+const pStart=pb(0x2ea043,1.3,'start'), pStop=pb(0xc62828,1.65,'stop'), pReset=pb(0xeeeeee,2.0,'reset');
+const keyG=new THREE.Group(); keyG.position.set(2.35,0.55,0.79); scene.add(keyG); cyl(0.07,0.05,alu,0,0,0,['x',Math.PI/2],keyG); const keyBit=box(0.03,0.12,0.04,M(0x888888),0,0,0.04,keyG); keyBit.userData.btn='key'; clickables.push(keyBit);
+box(0.36,0.36,0.04,M(0xF2C200),2.85,0.55,0.77); const pE=cyl(0.14,0.1,M(0xd00000),2.85,0.55,0.84,['x',Math.PI/2]); pE.userData.btn='estop'; clickables.push(pE);
+
+// stopper (blue swivel plate + cylinder at back)
+const stopG=new THREE.Group(); stopG.position.set(STOP_X+0.05,BELT_Y+0.13,0); scene.add(stopG);
+const stopPlate=box(0.08,0.2,0.62,blue,0,0,0,stopG);
+cyl(0.07,0.6,alu,STOP_X+0.05,BELT_Y+0.13,-0.95,['x',Math.PI/2]);
+const rod=cyl(0.025,0.6,M(0xdddddd,{metalness:.9}),STOP_X+0.05,BELT_Y+0.13,-0.6,['x',Math.PI/2]);
+// sensor gantry over the stopper (like the photo's bracket)
+box(0.06,0.9,0.06,alu,0.55,1.55,-0.58); box(0.06,0.9,0.06,alu,0.55,1.55,0.58); box(0.06,0.06,1.22,alu,0.55,2.0,0);
+const sB2=cyl(0.07,0.32,M(0x1F5FD1),0.77,1.78,-0.12); const sB6=cyl(0.06,0.3,M(0x1F5FD1),0.77,1.78,0.14);
+box(0.5,0.05,0.06,alu,0.75,1.95,0);
+// light barriers
+const beams={};
+function barrier(key,x){box(0.12,0.2,0.1,M(0x333),x,1.33,-0.6); box(0.06,0.16,0.08,M(0x333),x,1.33,0.6);
+  const bm=new THREE.Mesh(new THREE.CylinderGeometry(0.008,0.008,1.2,6),new THREE.MeshBasicMaterial({color:0xff3030,transparent:true,opacity:.35}));
+  bm.rotation.x=Math.PI/2; bm.position.set(x,1.33,0); scene.add(bm); beams[key]=bm;
+  const lab=label(key,0.5); lab.position.set(x,1.65,-0.62); scene.add(lab);}
+function label(t,s=0.6,col='#E8B04A'){const c=document.createElement('canvas');c.width=256;c.height=96;const g=c.getContext('2d');g.font='600 54px JetBrains Mono, monospace';g.fillStyle=col;g.textAlign='center';g.textBaseline='middle';g.fillText(t,128,48);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false}));sp.scale.set(s,s*0.375,1);return sp}
+barrier('B1',SX.B1); barrier('B3',SX.B3-0.25); barrier('B4',SX.B4);
+// B3 actually sits just upstream of the stopper; detection uses SX.B3 (part centre at hold position)
+const lB2=label('B2',0.45); lB2.position.set(0.55,2.25,-0.2); scene.add(lB2);
+const lB6=label('B6',0.45); lB6.position.set(0.98,2.25,0.2); scene.add(lB6);
+const sensorBeams={B2:new THREE.Mesh(new THREE.ConeGeometry(0.1,0.35,16,1,true),new THREE.MeshBasicMaterial({color:0x3D8BFD,transparent:true,opacity:.0})),
+                   B6:new THREE.Mesh(new THREE.ConeGeometry(0.08,0.35,16,1,true),new THREE.MeshBasicMaterial({color:0xff6a00,transparent:true,opacity:.0}))};
+sensorBeams.B2.position.set(0.77,1.45,-0.12); sensorBeams.B6.position.set(0.77,1.45,0.14); scene.add(sensorBeams.B2,sensorBeams.B6);
+
+// engineer overlays
+const engG=new THREE.Group(); engG.visible=false; scene.add(engG);
+{const arrowMat=new THREE.LineBasicMaterial({color:0xE8B04A});
+ const pts=[new THREE.Vector3(X0,BELT_Y+0.02,0.5),new THREE.Vector3(X1,BELT_Y+0.02,0.5)];
+ engG.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),arrowMat));
+ [['B1 I124.0',SX.B1],['B3 I124.1',SX.B3],['B4 I124.4',SX.B4],['Stopper Q124.0',STOP_X]].forEach(([t,x],i)=>{const l=label(t,1.4,'#F3D9B0');l.position.set(x,0.4+(i%2)*0.22,1.1);engG.add(l)});
+ const lv=label('v = f/50 · 100 mm/s',1.8,'#E8B04A'); lv.position.set(-1.2,1.0,1.1); engG.add(lv);}
+const vLabel=label('0 mm/s',1.0,'#E8B04A'); vLabel.position.set(-1.2,0.78,1.1); engG.add(vLabel);
+
+/* ============ PARTS ============ */
+function feed(type){
+  if(S.estop) return;
+  if(parts.some(p=>Math.abs(p.x-FEED_X)<GAP+0.02)) return log('Entry occupied, part not placed','i');
+  const t=TYPES[type];
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(R,R,H,32),M(t.c,{metalness:t.m,roughness:t.r}));
+  m.castShadow=true; m.position.set(FEED_X,BELT_Y+H/2,0); scene.add(m);
+  parts.push({id:++pid,type,x:FEED_X,mesh:m,t0:S.t,passed:false,drop:0});
+}
+function removePart(p){scene.remove(p.mesh);p.mesh.geometry.dispose();parts=parts.filter(q=>q!==p)}
+
+/* ============ PHYSICS ============ */
+function physics(dt){
+  // drive model
+  const target = D.fault?0 : D.dir*(S.jog?10:D.fset);
+  const rate=50/Math.max(0.05,D.ramp);
+  if(D.fault){D.f+= -Math.sign(D.f)*Math.min(Math.abs(D.f),rate*2*dt)} // coast/OFF2-ish fast decay
+  else{const df=target-D.f; D.f+=Math.sign(df)*Math.min(Math.abs(df),rate*dt)}
+  const blocked=F.block; const slip=F.slip?0.33:1;
+  const v = blocked?0 : (D.f/50)*VMAX*slip;
+  const run=Math.abs(D.f)>0.3;
+  // current: magnetising + load, rises when blocked
+  if(blocked&&run){D.overI=Math.min(D.overI+dt*0.9,2)} else D.overI=Math.max(0,D.overI-dt*2);
+  const load=parts.length*0.02;
+  D.I = run? 0.55+0.18*Math.abs(D.f)/50+load+D.overI : 0;
+  if(D.I>1.95&&!D.fault){D.fault='F0001'; log('MM420 F0001 overcurrent','e')}
+  // temperature
+  D.T += ((run?55:35)+(F.ot?80:0)-D.T)*dt*0.05;
+  if(F.ot&&D.T>70&&!D.fault){D.fault='F0011'; log('MM420 F0011 motor overtemperature','e')}
+  if(run) S.energy += (0.23*D.I*230*0.8)*dt/3600; // ~ single phase input power (rough)
+
+  // stopper cylinder: spring extends, valve retracts
+  const air = !F.air;
+  const wantRetract = OUT.Q_retract && air && !F.jam;
+  const sp = 1/0.25; // 250 ms stroke
+  if(air){ if(wantRetract) S.stopper=Math.max(0,S.stopper-sp*dt); else if(!OUT.Q_retract) S.stopper=Math.min(1,S.stopper+sp*dt); }
+  const blocking = S.stopper>0.35;
+
+  // move parts (forward: front first)
+  const dir=Math.sign(v);
+  if(dir>0){ parts.sort((a,b)=>b.x-a.x); }
+  else if(dir<0){ parts.sort((a,b)=>a.x-b.x); }
+  let lead=null;
+  for(const p of parts){
+    if(p.drop) continue;
+    let nx=p.x+v*dt;
+    if(dir>0){
+      if(blocking && p.x<=STOP_X-R-0.029) nx=Math.min(nx,STOP_X-R-0.03);
+      if(lead) nx=Math.min(nx,lead.x-GAP);
+    }else if(dir<0){
+      if(blocking && p.x>=STOP_X+R+0.029) nx=Math.max(nx,STOP_X+R+0.03);
+      if(lead) nx=Math.max(nx,lead.x+GAP);
+      nx=Math.max(nx,X0+R+0.02);
+    }
+    if(dir) p.x = dir>0?Math.max(p.x,nx):Math.min(p.x,nx);
+    lead=p;
+    if(p.x>X1+0.05){p.drop=1}
+  }
+  // parts leaving the end: slide off toward next station
+  for(const p of [...parts]){ if(p.drop){p.drop+=dt; p.x+=0.8*dt; if(p.drop>0.6){removePart(p)} } }
+  for(const p of parts){p.mesh.position.x=p.x; p.mesh.position.y=BELT_Y+H/2-(p.drop?p.drop*p.drop*1.2:0)}
+  beltTex.offset.x -= v*dt/7.2*8;
+  return {v,run};
+}
+
+/* ============ SENSORS (I/O image) ============ */
+const at=(x)=>parts.some(p=>!p.drop&&Math.abs(p.x-x)<R*0.9);
+const partAt=(x)=>parts.find(p=>!p.drop&&Math.abs(p.x-x)<R*0.9);
+function readInputs(){
+  Object.assign(prevIN,IN);
+  const held=partAt(SX.B3);
+  IN.B1 = F.b1?0:+at(SX.B1);
+  IN.B3 = F.b3?1:+!!held;
+  IN.B2 = (held&&!F.b2)? TYPES[held.type].ind:0;
+  IN.B6 = (held&&!F.b6)? TYPES[held.type].opt:0;
+  IN.B4 = +at(SX.B4);
+  IN.S1B1 = +(S.stopper>0.97);
+  IN.S1B2 = F.s1b2?0:+(S.stopper<0.03);
+  IN.B7 = F.air?0:1;
+  IN.S1 = +(btnHeld==='start'); IN.S2 = +(btnHeld!=='stop'); IN.S3=+(btnHeld==='reset');
+  IN.S4 = +(S.key==='auto'); IN.S0 = +!S.estop;
+}
+const rise=k=>IN[k]&&!prevIN[k], fall=k=>!IN[k]&&prevIN[k];
+let btnHeld=null, btnTimer=0;
+function press(b){btnHeld=b;btnTimer=0.25}
+
+/* ============ PLC PROGRAM (OB1 scan) ============ */
+function setState(s,msg,err=false){ if(S.state!==s) log(`State → ${s}`+(msg?` · ${msg}`:''), err?'e':''); S.state=s; if(msg!==undefined){S.msg=msg;S.msgErr=err} }
+function fault(cause){ if(S.state==='FAULT')return; S.faultCause=cause; setState('FAULT',cause,true); S.step='—'; }
+function plc(dt){
+  S.stepT+=dt;
+  let dirCmd=0;
+  // safety chain first
+  if(!IN.S0){ if(S.state!=='ESTOP'){setState('ESTOP','EMERGENCY STOP. Release, then RESET',true);S.step='—'} }
+  else if(!IN.B7 && S.state!=='NOT_READY' && S.state!=='FAULT' && S.state!=='ESTOP'){ fault('Air pressure low (B7)') }
+  if(D.fault && S.state!=='FAULT' && S.state!=='ESTOP') fault(`Drive fault ${D.fault}`);
+
+  const resetPressed=rise('S3');
+  switch(S.state){
+    case 'ESTOP': case 'NOT_READY': case 'FAULT':
+      OUT.Q_retract=0;
+      if(resetPressed && IN.S0){
+        if(D.fault) ackDrive();
+        if(!IN.B7){S.msg='No air pressure (B7). Check the service unit';S.msgErr=true;break}
+        if(D.fault){S.msg=`Drive still in fault ${D.fault}. Clear the cause first`;S.msgErr=true;break}
+        if(IN.B3 && !partAt(SX.B3)){S.msg='B3 reports a part but the stopper is empty. Check B3';S.msgErr=true;break}
+        S.stopReq=false; S.inTransit=parts.filter(p=>p.x>SX.B1+R&&p.x<SX.B3-R).length; S.measure=null;
+        setState('HOMING','Homing: stopper out'); S.stepT=0;
+      }
+      break;
+    case 'HOMING':
+      OUT.Q_retract=0;
+      if(IN.S1B1){ setState(IN.S4?'READY':'MANUAL', IN.S4?'Ready. Press START':'Manual mode. Use the jog buttons'); }
+      else if(S.stepT>1.5) fault('Stopper not extended (1B1)');
+      break;
+    case 'READY':
+      if(!IN.S4){setState('MANUAL','Manual mode. Use the jog buttons');break}
+      if(rise('S1')){ setState('AUTO','Automatic'); S.step='WAIT'; S.stepT=0; S.lastProg=S.t; }
+      break;
+    case 'MANUAL':
+      if(IN.S4){setState('READY','Ready. Press START');S.jog=0;break}
+      OUT.Q_retract = S.jogStop?1:0;
+      dirCmd = S.jog;
+      break;
+    case 'AUTO': {
+      if(fall('S2')||!IN.S2) S.stopReq=true;
+      if(!IN.S4) S.stopReq=true;
+      if(fall('B1')) {S.inTransit++; S.lastProg=S.t}
+      if(rise('B1')) S.lastProg=S.t;
+      if(fall('B4')) S.runOn=Math.max(S.runOn,2);
+      if(rise('B3')) {S.inTransit=Math.max(0,S.inTransit-1); S.lastProg=S.t}
+      const want = IN.B1 || S.inTransit>0 || IN.B3 || IN.B4 || S.step==='RELEASE' || S.runOn>0;
+      S.runOn=Math.max(0,S.runOn-dt);
+      dirCmd = want?1:0;
+      // transport watchdog
+      if(S.inTransit>0 && Math.abs(D.f)>5 && S.t-S.lastProg>10){ fault('Transport timeout: part did not reach B3'); break }
+      switch(S.step){
+        case 'WAIT':
+          OUT.Q_retract=0;
+          if(S.stopReq){S.stopReq=false;setState('READY','Stopped at end of cycle. Press START');S.step='—';break}
+          if(IN.B3){S.step='MEASURE';S.stepT=0}
+          break;
+        case 'MEASURE':
+          if(S.stepT>0.8){
+            const cls = IN.B2?'metal':(IN.B6?'red':'black');
+            S.measure=cls; S.partsSeen++;
+            if(!IN.B3){S.step='WAIT';break}
+            if(cls==='black'){S.step='REJECT';S.stepT=0;S.msg='Reject at stopper: remove the part';S.msgErr=false; log('Classified BLACK → reject','i')}
+            else {S.step='RELEASE';S.stepT=0; log(`Classified ${cls.toUpperCase()} → pass`,'i')}
+          }
+          break;
+        case 'RELEASE':
+          OUT.Q_retract=1;
+          if(S.stepT>1.5 && !IN.S1B2){ fault('Stopper did not retract (1B2 timeout)'); break }
+          if(IN.S1B2 && !IN.B3){ S.step='CLOSE'; S.stepT=0; countGood(S.measure); S.runOn=4; }
+          if(S.stepT>4 && IN.B3 && IN.S1B2){ fault('Part did not leave the stopper'); }
+          break;
+        case 'CLOSE':
+          OUT.Q_retract=0;
+          if(IN.S1B1){S.step='WAIT';S.stepT=0;S.msg='Automatic';S.msgErr=false}
+          else if(S.stepT>1.5) fault('Stopper did not extend (1B1 timeout)');
+          break;
+        case 'REJECT':
+          OUT.Q_retract=0;
+          if(!IN.B3){ S.rej++; S.step='WAIT'; S.stepT=0; S.msg='Automatic'; log('Reject removed by operator','i') }
+          break;
+      }
+      break;}
+  }
+  // drive command words
+  const enabled = IN.S0 && (S.state==='AUTO'||S.state==='MANUAL');
+  D.dir = enabled?dirCmd:0;
+  D.stw = !IN.S0?0x047C : D.fault?0x04FE : D.dir>0?0x047F : D.dir<0?0x0C7F : 0x047E;
+  const fcmd = D.dir? (S.jog?10:D.fset):0;
+  D.hsw = Math.round(fcmd/50*0x4000);
+  D.zsw = D.fault?0xFA38 : (Math.abs(D.f)>0.3?0xFB34:0xFB31);
+  // lamps
+  const blink=(S.t*2|0)%2;
+  OUT.H1 = S.state==='AUTO'?1 : S.state==='READY'?blink:0;
+  OUT.H2 = (S.state==='NOT_READY'||S.state==='FAULT'||S.state==='ESTOP')?blink:0;
+  OUT.H3 = S.state==='FAULT'||S.state==='ESTOP'?1 : S.step==='REJECT'?blink:0;
+}
+function ackDrive(){ if(!F.block && !F.ot && D.T<60){D.fault=null; D.overI=0; log('Drive fault acknowledged (STW1 04FE)','i')} }
+function countGood(cls){S.good++; if(cls==='metal')S.goodM++; else S.goodR++; if(S.tLastGood!=null) S.cycles.push(S.t-S.tLastGood); if(S.cycles.length>20)S.cycles.shift(); S.tLastGood=S.t}
+
+/* ============ AUTO FEED / OPERATOR ============ */
+function automation(dt){
+  if(S.autoFeed && S.state==='AUTO'){ S.feedT-=dt; if(S.feedT<=0){ const r=Math.random(); feed(r<0.4?'metal':r<0.75?'red':'black'); S.feedT=3.2+Math.random()*1.5 } }
+  if(S.step==='REJECT' && S.autoOp){ S.rejectT+=dt; if(S.rejectT>2){ removeReject(); } } else S.rejectT=0;
+}
+function removeReject(){const p=partAt(SX.B3); if(p){ removePart(p) }}
+
+/* ============ UI ============ */
+const $=id=>document.getElementById(id);
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='p-'+b.dataset.t));if(b.dataset.t==='tel')sizeChart()});
+$('bStart').onclick=()=>press('start'); $('bStop').onclick=()=>press('stop'); $('bReset').onclick=()=>press('reset');
+$('bEstop').onclick=toggleEstop;
+function toggleEstop(){S.estop=!S.estop; log(S.estop?'E-STOP pressed':'E-STOP released', S.estop?'e':'i')}
+document.querySelectorAll('#keySeg button').forEach(b=>b.onclick=()=>setKey(b.dataset.k));
+function setKey(k){S.key=k;document.querySelectorAll('#keySeg button').forEach(x=>x.classList.toggle('on',x.dataset.k===k));$('manBox').hidden=k!=='man';S.jog=0;log('Key switch → '+k.toUpperCase(),'i')}
+function hold(el,on,off){el.addEventListener('pointerdown',on);['pointerup','pointerleave','pointercancel'].forEach(e=>el.addEventListener(e,off))}
+hold($('jFwd'),()=>S.jog=1,()=>S.jog=0); hold($('jRev'),()=>S.jog=-1,()=>S.jog=0);
+$('jStop').onclick=()=>S.jogStop=!S.jogStop;
+$('bRemove').onclick=removeReject;
+$('autoOp').onchange=e=>S.autoOp=e.target.checked;
+document.querySelectorAll('[data-feed]').forEach(b=>b.onclick=()=>feed(b.dataset.feed));
+$('autoFeed').onclick=()=>{S.autoFeed=!S.autoFeed;$('autoFeed').textContent='Auto feed: '+(S.autoFeed?'on':'off');S.feedT=0};
+$('fset').oninput=e=>{D.fset=+e.target.value;$('fsetV').textContent=D.fset+' Hz'};
+$('ramp').oninput=e=>{D.ramp=+e.target.value;$('rampV').textContent=D.ramp.toFixed(1)+' s'};
+$('viewBtn').onclick=()=>{eng=!eng;engG.visible=eng;$('viewBtn').textContent='Engineer view: '+(eng?'on':'off')};
+
+// fault list
+$('fList').innerHTML=FAULTS.map(f=>`<label class="fault"><input type="checkbox" data-f="${f.id}"><div><b>${f.name}</b><div class="d">${f.d}</div></div></label>`).join('');
+document.querySelectorAll('[data-f]').forEach(c=>c.onchange=()=>{ if(mystery){c.checked=!!F[c.dataset.f];return} F[c.dataset.f]=c.checked; log((c.checked?'Fault injected: ':'Fault cleared: ')+FAULTS.find(f=>f.id===c.dataset.f).name, c.checked?'e':'i')});
+// mystery
+$('qSel').innerHTML='<option value="">Which fault is it?</option>'+FAULTS.map(f=>`<option value="${f.id}">${f.name}</option>`).join('');
+$('qStart').onclick=()=>{ Object.keys(F).forEach(k=>F[k]=false); document.querySelectorAll('[data-f]').forEach(c=>{c.checked=false;c.disabled=true});
+  mystery=FAULTS[Math.random()*FAULTS.length|0].id; F[mystery]=true; $('qBox').hidden=false; $('qGive').disabled=false; $('qRes').textContent=''; $('qRes').className='res';
+  log('Mystery fault injected. Run the line and diagnose it','e'); };
+$('qCheck').onclick=()=>{ const v=$('qSel').value; if(!v)return; if(v===mystery){ $('qRes').textContent='Correct. Clear it and press RESET.'; $('qRes').className='res ok'; endMystery() } else { $('qRes').textContent='Not that one. Look at the I/O tab again.'; $('qRes').className='res no' } };
+$('qGive').onclick=()=>{ $('qRes').textContent='It was: '+FAULTS.find(f=>f.id===mystery).name; $('qRes').className='res'; endMystery() };
+function endMystery(){ const id=mystery; mystery=null; document.querySelectorAll('[data-f]').forEach(c=>{c.disabled=false;c.checked=!!F[c.dataset.f]}); $('qGive').disabled=true; }
+
+// IO tables
+const IO_IN=[['I124.0','B1','Part at entry (light barrier)','B1'],['I124.1','B3','Part at stopper','B3'],['I124.2','B2','Inductive: metal','B2'],['I124.3','B6','Optical diffuse: bright','B6'],['I124.4','B4','Part at exit (light barrier)','B4'],['I124.5','1B1','Stopper extended','S1B1'],['I124.6','1B2','Stopper retracted','S1B2'],['I124.7','B7','Air pressure OK','B7'],['I125.0','S1','START (NO)','S1'],['I125.1','S2','STOP (NC)','S2'],['I125.2','S3','RESET (NO)','S3'],['I125.3','S4','Key switch AUTO','S4'],['I125.4','S0','E-STOP chain OK (NC)','S0']];
+const IO_OUT=[['Q124.0','1M1','Stopper valve: retract','Q_retract'],['Q124.1','H1','Lamp START','H1'],['Q124.2','H2','Lamp RESET','H2'],['Q124.3','H3','Lamp FAULT / reject','H3']];
+const FMAP={b1:'B1',b3:'B3',b2:'B2',b6:'B6',s1b2:'S1B2',air:'B7'};
+$('tIn').innerHTML=IO_IN.map(r=>`<tr id="r-${r[3]}"><td class="addr">${r[0]}</td><td><b>${r[1]}</b></td><td>${r[2]}</td><td class="v"><span class="bit" id="v-${r[3]}">0</span></td></tr>`).join('');
+$('tOut').innerHTML=IO_OUT.map(r=>`<tr><td class="addr">${r[0]}</td><td><b>${r[1]}</b></td><td>${r[2]}</td><td class="v"><span class="bit" id="v-${r[3]}">0</span></td></tr>`).join('');
+$('tDp').innerHTML=[['PQW256','STW1','Control word','stw'],['PQW258','HSW','Speed setpoint','hsw'],['PIW256','ZSW1','Status word','zsw'],['PIW258','HIW','Actual speed','hiw']].map(r=>`<tr><td class="addr">${r[0]}</td><td><b>${r[1]}</b></td><td>${r[2]}</td><td class="v"><span class="bit word" id="v-${r[3]}">0000</span></td></tr>`).join('');
+const hex=n=>((n&0xFFFF)>>>0).toString(16).toUpperCase().padStart(4,'0');
+
+function log(t,c=''){const el=$('log');if(!el)return;const d=document.createElement('div');d.className=c;const tt=S.t;d.textContent=`${String(Math.floor(tt/60)).padStart(2,'0')}:${(tt%60).toFixed(1).padStart(4,'0')}  ${t}`;el.prepend(d);while(el.childNodes.length>200)el.lastChild.remove()}
+
+// chart
+const hist=[]; const ch=$('chart'); let cg;
+function sizeChart(){const r=ch.getBoundingClientRect(); if(!r.width)return; ch.width=r.width*devicePixelRatio; ch.height=r.height*devicePixelRatio; cg=ch.getContext('2d')}
+function drawChart(){ if(!cg||!$('p-tel').classList.contains('on'))return; const w=ch.width,h=ch.height,p=8*devicePixelRatio; cg.clearRect(0,0,w,h);
+  cg.strokeStyle='#2a1c1e';cg.lineWidth=1;for(let i=0;i<=5;i++){const y=p+(h-2*p)*i/5;cg.beginPath();cg.moveTo(p,y);cg.lineTo(w-p,y);cg.stroke()}
+  const now=S.t, span=40, X=t=>p+(w-2*p)*(1-(now-t)/span), Y=v=>h-p-(h-2*p)*v/50;
+  cg.fillStyle='#E5484D33'; hist.forEach(s=>{if(s.flt)cg.fillRect(X(s.t),p,Math.max(2,(w-2*p)/400),h-2*p)});
+  const line=(k,col,sc)=>{cg.strokeStyle=col;cg.lineWidth=2*devicePixelRatio/1.4;cg.beginPath();hist.forEach((s,i)=>{const x=X(s.t),y=Y(Math.abs(s[k])*sc);i?cg.lineTo(x,y):cg.moveTo(x,y)});cg.stroke()};
+  line('f','#E8B04A',1); line('I','#9cc2ff',20);
+  cg.fillStyle='#A8968E';cg.font=`${10*devicePixelRatio}px JetBrains Mono`;cg.fillText('50',p+2,p+10*devicePixelRatio);cg.fillText('0',p+2,h-p-2)}
+
+// HMI texture on the 3D panel
+function drawHmi(){const g=hmiG; g.fillStyle='#E7EEF6';g.fillRect(0,0,320,240);g.fillStyle='#2C5C9A';g.fillRect(0,0,320,30);
+  g.fillStyle='#fff';g.font='bold 16px Inter, sans-serif';g.fillText('MT AC  ·  '+S.state,10,21);
+  g.fillStyle='#10223A';g.font='15px JetBrains Mono, monospace';
+  g.fillText('Step   '+S.step,12,58);g.fillText('Belt   '+D.f.toFixed(1)+' Hz',12,82);g.fillText('Good   '+S.good,12,106);g.fillText('Reject '+S.rej,12,130);
+  g.fillStyle=S.msgErr?'#FFD9D9':'#fff';g.fillRect(8,150,304,44);g.fillStyle=S.msgErr?'#8A0F14':'#10223A';g.font='13px Inter, sans-serif';
+  wrap(g,S.msg,14,168,292,16);
+  // bargraph
+  g.fillStyle='#c9d4e0';g.fillRect(280,40,24,100);g.fillStyle='#2C5C9A';const bh=100*Math.abs(D.f)/50;g.fillRect(280,140-bh,24,bh);
+  hmiTex.needsUpdate=true}
+function wrap(g,t,x,y,w,lh){const ws=t.split(' ');let l='';for(const s of ws){const tt=l?l+' '+s:s;if(g.measureText(tt).width>w){g.fillText(l,x,y);y+=lh;l=s}else l=tt}g.fillText(l,x,y)}
+
+function updateUI(){
+  const st=S.state; $('stPill').textContent=st+(st==='AUTO'?' · '+S.step:'');
+  $('stPill').style.color = st==='AUTO'?'var(--ok)':(st==='FAULT'||st==='ESTOP')?'var(--bad)':'var(--gold)';
+  $('hzPill').textContent=D.f.toFixed(1)+' Hz';
+  $('hMode').textContent=st+(S.key==='man'?' (key MAN)':''); $('hStep').textContent=S.step;
+  $('hBelt').textContent=D.f.toFixed(1)+' Hz · '+(Math.abs(D.f)<0.3?'stop':D.f>0?'forward':'reverse');
+  $('hGood').textContent=`${S.good}  (metal ${S.goodM} · red ${S.goodR})`; $('hRej').textContent=S.rej;
+  $('hMsg').textContent=S.msg; $('hMsg').className='msg'+(S.msgErr?' err':'');
+  const m=Math.floor(S.t/60), s=Math.floor(S.t%60); $('hClock').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  $('lStart').classList.toggle('on',!!OUT.H1); $('lReset').classList.toggle('on',!!OUT.H2); $('lFault').classList.toggle('on',!!OUT.H3);
+  $('bEstop').classList.toggle('on',S.estop); $('bEstop').textContent=S.estop?'RELEASE E-STOP':'E-STOP';
+  $('bRemove').disabled = S.step!=='REJECT';
+  for(const r of IO_IN){const e=$('v-'+r[3]);e.textContent=IN[r[3]]?1:0;e.classList.toggle('on',!!IN[r[3]])}
+  for(const r of IO_OUT){const e=$('v-'+r[3]);e.textContent=OUT[r[3]]?1:0;e.classList.toggle('on',!!OUT[r[3]])}
+  for(const [f,k] of Object.entries(FMAP)){const row=$('r-'+k); if(row) row.classList.toggle('forced',!!F[f]&&!mystery)}
+  $('v-stw').textContent=hex(D.stw); $('v-hsw').textContent=hex(D.hsw); $('v-zsw').textContent=hex(D.zsw); $('v-hiw').textContent=hex(Math.round(D.f/50*0x4000));
+  $('dF').textContent=D.f.toFixed(1)+' Hz'; $('dI').textContent=D.I.toFixed(2)+' A'; $('dT').textContent=D.T.toFixed(0)+' °C';
+  $('dStw').textContent=hex(D.stw); $('dZsw').textContent=hex(D.zsw); $('dHsw').textContent=hex(D.hsw); $('dFlt').textContent=D.fault||'—';
+  $('dFlt').style.color=D.fault?'var(--bad)':'';
+  $('sGood').textContent=S.good; $('sRej').textContent=S.rej;
+  $('sTp').textContent=S.runT>5?((S.good+S.rej)/(S.upT/60)).toFixed(1):'0.0';
+  $('sCyc').textContent=S.cycles.length?(S.cycles.reduce((a,b)=>a+b,0)/S.cycles.length).toFixed(1):'—';
+  $('sAv').textContent=S.upT>1?Math.round(100*S.runT/S.upT)+'%':'—';
+  $('sE').textContent=S.energy.toFixed(2);
+}
+
+function updateScene(dt,v){
+  // stopper visuals
+  stopG.position.z = -0.75*(1-S.stopper); rod.position.z=-0.6-0.4*(1-S.stopper); rod.scale.y=1;
+  // beams
+  for(const k of ['B1','B3','B4']){const on=IN[k]; beams[k].material.color.set(on?0xE8B04A:0xff3030); beams[k].material.opacity=on?0.9:0.3}
+  sensorBeams.B2.material.opacity=IN.B2?0.45:0.05; sensorBeams.B6.material.opacity=IN.B6?0.45:0.05;
+  // panel lamps
+  pStart.material.emissive.set(OUT.H1?0x2ea043:0x000000); pReset.material.emissive.set(OUT.H2?0x777777:0x000000);
+  pStop.material.emissive.set(OUT.H3?0x8a1010:0x000000);
+  keyBit.rotation.z = S.key==='auto'?0:-Math.PI/2;
+  pE.position.z = S.estop?0.79:0.84;
+  // PLC LEDs mirror inputs
+  const ins=['B1','B3','B2','B6','B4','S1B1','S1B2','B7','S1','S2','S3','S4','S0'];
+  plcLeds.forEach((l,i)=>{const on=i<ins.length?IN[ins[i]]:(i===13?OUT.Q_retract:0); l.material.emissive.set(on?0x2bff6a:0x000000)});
+  runLed.material.emissive.set(0x22cc55); sfLed.material.emissive.set((S.state==='FAULT')?0xff2020:0x000000);
+  mmLed.material.emissive.set(D.fault?0xff2020:Math.abs(D.f)>0.3?0x22cc55:0x557722);
+  motor.rotation.y += v*dt*4;
+}
+const vlC=document.createElement('canvas'); vlC.width=256; vlC.height=96; const vlG=vlC.getContext('2d'); const vlTex=new THREE.CanvasTexture(vlC); vLabel.material.map=vlTex;
+function updVLabel(v){vlG.clearRect(0,0,256,96);vlG.font='600 46px JetBrains Mono, monospace';vlG.fillStyle='#E8B04A';vlG.textAlign='center';vlG.textBaseline='middle';vlG.fillText((v*100).toFixed(0)+' mm/s',128,48);vlTex.needsUpdate=true}
+
+// raycast clicks on the 3D panel
+const ray=new THREE.Raycaster(), mp=new THREE.Vector2(); let downAt=null;
+renderer.domElement.addEventListener('pointerdown',e=>{downAt=[e.clientX,e.clientY]});
+renderer.domElement.addEventListener('pointerup',e=>{ if(!downAt||Math.hypot(e.clientX-downAt[0],e.clientY-downAt[1])>5)return;
+  const r=renderer.domElement.getBoundingClientRect(); mp.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1); ray.setFromCamera(mp,cam);
+  const hit=ray.intersectObjects(clickables)[0]; if(!hit)return; const b=hit.object.userData.btn;
+  if(b==='estop')toggleEstop(); else if(b==='key')setKey(S.key==='auto'?'man':'auto'); else press(b); });
+
+function resize(){const r=view.getBoundingClientRect(); renderer.setSize(r.width,r.height,false); renderer.domElement.style.width=r.width+'px'; renderer.domElement.style.height=r.height+'px'; cam.aspect=r.width/r.height; cam.updateProjectionMatrix(); sizeChart()}
+addEventListener('resize',resize); resize();
+
+/* ============ MAIN LOOP ============ */
+let last=performance.now(), uiT=0, hmiT=0, vlT=0;
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now; S.t+=dt;
+  if(btnTimer>0){btnTimer-=dt; if(btnTimer<=0) btnHeld=null}
+  readInputs(); plc(dt); automation(dt);
+  const {v,run}=physics(dt);
+  if(S.state==='AUTO'||S.state==='FAULT'){S.upT+=dt; if(S.state==='AUTO')S.runT+=dt}
+  hist.push({t:S.t,f:D.f,I:D.I,flt:S.state==='FAULT'}); while(hist.length&&hist[0].t<S.t-40)hist.shift();
+  updateScene(dt,v); vlT+=dt; if(eng&&vlT>0.25){vlT=0;updVLabel(v)}
+  uiT+=dt; if(uiT>0.1){uiT=0;updateUI();drawChart()}
+  hmiT+=dt; if(hmiT>0.25){hmiT=0;drawHmi()}
+  ctl.update(); renderer.render(scene,cam); requestAnimationFrame(frame);
+}
+log('Twin started. Press RESET, then START, then add parts','i');
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
