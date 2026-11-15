@@ -148,7 +148,7 @@ const $=id=>document.getElementById(id);
 const COL={red:0xC0262D,silver:0xC9CED6,black:0x1b1b1d};
 const CSS={red:'#C0262D',silver:'#C9CED6',black:'#2a2a2d'};
 /* ---------- loop path (rounded rectangle) ---------- */
-const A=7.2,B=3.0,RC=1.3,PTS=[];
+const A=1.5,B=4.6,RC=0.35,PTS=[];const CAP=30;
 (function(){const add=(x,z)=>PTS.push([x,z]);
  for(let i=0;i<120;i++)add(-A+RC+(2*(A-RC))*i/120,B);
  for(let i=0;i<30;i++){const a=Math.PI/2-Math.PI/2*i/30;add(A-RC+RC*Math.cos(a),B-RC+RC*Math.sin(a))}
@@ -167,13 +167,13 @@ function sOf(x,z){let best=0,bd=1e9;for(let i=0;i<PTS.length;i++){const d=Math.h
 
 /* ---------- stations ---------- */
 const ST=[
- {k:'dist',n:'Distribution',x:-4.6,z:B,ct:4},
- {k:'test',n:'Testing',x:-1.2,z:B,ct:3},
- {k:'proc',n:'Processing',x:2.4,z:B,ct:5},
- {k:'assy',n:'Robot Assembly',x:A,z:0,ct:9},
- {k:'asrs',n:'AS/RS',x:3.0,z:-B,ct:6},
- {k:'hand',n:'Handling',x:-0.8,z:-B,ct:4},
- {k:'sort',n:'Sorting',x:-4.4,z:-B,ct:3},
+ {k:'dist',n:'Distribution',x:-A,z:-3.3,ct:4},
+ {k:'test',n:'Testing',x:-A,z:-1.45,ct:3},
+ {k:'proc',n:'Processing',x:-A,z:2.4,ct:5},
+ {k:'assy',n:'Robot Assembly',x:A,z:2.0,ct:9,w:2.4},
+ {k:'asrs',n:'AS/RS',x:A,z:-2.3,ct:6},
+ {k:'hand',n:'Handling',x:-A,z:0.45,ct:4,w:1.6},
+ {k:'sort',n:'Sorting',x:-A,z:0.45,ct:3,off:4.1,w:1.6},
 ];
 ST.forEach((s,i)=>{s.i=i;s.s=sOf(s.x,s.z);s.busy=0;s.pal=null;s.t=0;s.work=0;s.done=0;s.state='idle'});
 
@@ -197,8 +197,8 @@ for(let i=0;i<7;i++)SIM.stock.push(['red','silver','black'][i%3]);
 const view=$('view');
 const R3=new THREE.WebGLRenderer({antialias:true});R3.setPixelRatio(Math.min(devicePixelRatio,2));R3.shadowMap.enabled=true;R3.outputEncoding=THREE.sRGBEncoding;view.prepend(R3.domElement);
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x120A0B);scene.fog=new THREE.Fog(0x120A0B,30,60);
-const cam=new THREE.PerspectiveCamera(40,1,0.1,200);cam.position.set(1.5,15,19);
-const ctl=new THREE.OrbitControls(cam,R3.domElement);ctl.target.set(1,0.6,0.5);ctl.enableDamping=true;ctl.maxPolarAngle=1.5;ctl.minDistance=6;ctl.maxDistance=40;
+const cam=new THREE.PerspectiveCamera(40,1,0.1,200);cam.position.set(8.5,9,11.5);
+const ctl=new THREE.OrbitControls(cam,R3.domElement);ctl.target.set(-0.3,0.9,0);ctl.enableDamping=true;ctl.maxPolarAngle=1.5;ctl.minDistance=6;ctl.maxDistance=40;
 scene.add(new THREE.HemisphereLight(0xfff2e6,0x2a1416,0.6));
 const sun=new THREE.DirectionalLight(0xffffff,0.85);sun.position.set(6,14,8);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-14,right:14,top:14,bottom:-14});scene.add(sun);
 const rim=new THREE.DirectionalLight(0xE8B04A,0.3);rim.position.set(-8,5,-8);scene.add(rim);
@@ -219,31 +219,50 @@ const floor=box(30,0.2,18,M(0xE9E9E9,{roughness:.95}),0,-0.1,0);floor.receiveSha
    const tube=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,true),400,0.05,6,true),alu);tube.castShadow=true;scene.add(tube)};
  rail(0.48);rail(-0.48);
  for(let i=0;i<N;i+=25){const p=PTS[i];box(0.1,0.6,0.1,alu,p[0],0.3,p[1])}}
-// stations
-const stObj=[];
+// stations (layout follows the Lab 5 photo: narrow loop, robot front-right, AS/RS rear-right, MPS stations on the left)
+const stObj=[];const white=M(0xF1F1EF,{roughness:.45});
 ST.forEach(s=>{const p=at(s.s);const nx=-Math.sin(p.h),nz=Math.cos(p.h);
- // outward = away from loop centre
- const out=(nx*p.x+nz*p.z)>0?1:-1;const ox=nx*out,oz=nz*out;
- const g=new THREE.Group();g.position.set(p.x+ox*1.55,0,p.z+oz*1.55);g.rotation.y=-Math.atan2(oz,ox)+Math.PI/2;scene.add(g);
- box(2.0,0.9,1.6,grey,0,0.45,0,g);box(2.05,0.05,1.65,alu,0,0.92,0,g);
+ const out=(nx*p.x+nz*p.z)>0?1:-1;const ox=nx*out,oz=nz*out;const off=s.off||1.45;
+ const g=new THREE.Group();g.position.set(p.x+ox*off,0,p.z+oz*off);g.rotation.y=-Math.atan2(oz,ox)+Math.PI/2;scene.add(g);
+ const W=s.w||1.7;
+ if(s.k!=='asrs'){box(W,0.85,1.3,grey,0,0.425,0.05,g);box(W+0.05,0.06,1.35,alu,0,0.88,0.05,g);box(W-0.2,0.5,0.02,M(0xE9ECEF),0,0.45,0.72,g)}
  const o={g,ox,oz};
- // station-specific mechanism
- if(s.k==='dist'){o.mag=cyl(0.22,1.1,M(0xdadde0,{transparent:true,opacity:.6}),0.3,1.5,0.1,g);o.arm=box(0.12,0.12,1.3,blue,-0.3,1.25,-0.4,g)}
- else if(s.k==='test'){box(0.08,1.2,0.08,alu,0,1.5,-0.5,g);o.head=box(0.3,0.2,0.3,blue,0,1.6,-0.9,g)}
- else if(s.k==='proc'){box(0.9,0.12,0.9,dark,0.3,1.0,0.2,g);o.head=cyl(0.12,0.5,M(0x666b70,{metalness:.8}),0,1.9,-0.95,g);box(0.1,1.4,0.1,alu,0,1.6,-0.45,g);box(0.1,0.1,0.6,alu,0,2.25,-0.7,g)}
- else if(s.k==='assy'){cyl(0.3,0.3,M(0xe8e8e8),0,1.07,0,g);const b=new THREE.Group();b.position.set(0,1.2,0);g.add(b);box(0.3,0.35,0.3,M(0xf3f3f3),0,0.17,0,b);
-   const l1=new THREE.Group();l1.position.y=0.35;b.add(l1);box(0.16,0.9,0.16,M(0xf3f3f3),0,0.45,0,l1);const l2=new THREE.Group();l2.position.y=0.9;l1.add(l2);box(0.14,0.14,0.8,M(0xf3f3f3),0,0,-0.4,l2);box(0.1,0.25,0.1,M(0xE8B04A),0,-0.12,-0.8,l2);o.base=b;o.l1=l1;o.l2=l2}
- else if(s.k==='asrs'){o.rack=new THREE.Group();o.rack.position.set(0,0.95,0.45);g.add(o.rack);box(2.0,1.6,0.05,alu,0,0.8,0.25,o.rack);o.cells=[];
-   for(let r=0;r<3;r++)for(let c=0;c<6;c++){const m=cyl(0.1,0.18,M(0x333333),-0.82+c*0.33,0.25+r*0.5,0.05,o.rack);m.visible=false;o.cells.push(m);box(0.3,0.03,0.4,alu,-0.82+c*0.33,0.14+r*0.5,0.05,o.rack)}
-   o.shuttle=box(0.3,0.25,0.3,blue,0,1.4,-0.3,g)}
- else if(s.k==='hand'){box(1.8,0.1,0.1,alu,0,2.0,-0.3,g);[-0.85,0.85].forEach(x=>box(0.1,1.1,0.1,alu,x,1.45,-0.3,g));o.head=box(0.25,0.35,0.25,blue,0,1.7,-0.3,g)}
- else if(s.k==='sort'){o.slides=[];for(let i=0;i<4;i++){const sl=box(0.35,0.05,1.1,i===3?M(0x7A0C14):alu,-0.7+i*0.47,0.85,0.25,g);sl.rotation.x=-0.25;o.slides.push(sl)}o.head=box(0.2,0.2,0.2,blue,0,1.3,-0.5,g)}
- o.lamp=new THREE.Mesh(new THREE.SphereGeometry(0.11,16,12),new THREE.MeshStandardMaterial({color:0x444,emissive:0x000000}));o.lamp.position.set(0.85,2.15,0.65);g.add(o.lamp);box(0.04,1.2,0.04,alu,0.85,1.5,0.65,g);
- const lb=label(`${s.i+1}  ${s.n}`,2.6);lb.position.set(0,2.75,0);g.add(lb);
+ if(s.k==='dist'){o.mag=cyl(0.2,1.0,M(0xdadde0,{transparent:true,opacity:.55}),0.35,1.4,0.2,g);box(0.5,0.3,0.4,alu,0.35,1.05,0.2,g);
+   const piv=new THREE.Group();piv.position.set(-0.2,1.15,0.1);g.add(piv);box(0.12,0.1,1.2,blue,0,0,-0.5,piv);cyl(0.07,0.12,M(0x333333),0,0,-1.05,piv);o.swing=piv}
+ else if(s.k==='test'){box(0.4,0.35,0.4,M(0x444a50),0.3,1.08,0.1,g);box(0.07,1.3,0.07,alu,-0.2,1.5,-0.45,g);box(0.07,0.07,0.75,alu,-0.2,2.12,-0.8,g);o.head=box(0.22,0.3,0.22,blue,-0.2,1.75,-1.12,g);o.hy=1.75}
+ else if(s.k==='proc'){o.turn=new THREE.Group();o.turn.position.set(0,0.95,-0.1);g.add(o.turn);cyl(0.5,0.05,alu,0,0,0,o.turn);for(let k=0;k<6;k++){const a=k*Math.PI/3;box(0.25,0.05,0.18,alu,Math.cos(a)*0.55,0,Math.sin(a)*0.55,o.turn).rotation.y=-a;cyl(0.07,0.12,M(0x1F5FD1),Math.cos(a)*0.55,0.08,Math.sin(a)*0.55,o.turn)}
+   box(0.08,1.2,0.08,alu,0.55,1.5,0.35,g);box(0.08,0.08,0.5,alu,0.55,2.1,0.12,g);o.head=cyl(0.08,0.4,M(0x666b70,{metalness:.8}),0.55,1.8,-0.1,g);o.hy=1.8}
+ else if(s.k==='assy'){ // Mitsubishi RV-type 6-axis arm, white
+   cyl(0.07,0.6,blue,0.6,1.2,0.35,g);cyl(0.07,0.6,blue,0.75,1.2,0.35,g);box(0.3,0.3,0.25,M(0x9aa0a6),-0.55,1.05,0.35,g);
+   const b=new THREE.Group();b.position.set(0,0.9,0.15);g.add(b);cyl(0.24,0.3,white,0,0.15,0,b);
+   const tur=new THREE.Group();tur.position.y=0.32;b.add(tur);cyl(0.2,0.25,white,0,0.12,0,tur);
+   const l1=new THREE.Group();l1.position.y=0.3;tur.add(l1);box(0.2,0.75,0.24,white,0,0.37,0,l1);
+   const l2=new THREE.Group();l2.position.y=0.72;l1.add(l2);box(0.18,0.18,0.62,white,0,0,-0.28,l2);
+   const wr=new THREE.Group();wr.position.z=-0.6;l2.add(wr);cyl(0.06,0.2,M(0xdddddd),0,-0.1,0,wr);box(0.12,0.08,0.06,M(0x333333),0,-0.22,0,wr);
+   o.base=tur;o.l1=l1;o.l2=l2;o.wr=wr}
+ else if(s.k==='asrs'){ // high-bay rack with XZ gantry on top
+   const rk=new THREE.Group();rk.position.set(0,0,0.45);g.add(rk);o.cells=[];
+   [-1.25,1.25].forEach(x=>[0,0.6].forEach(z=>box(0.07,3.2,0.07,alu,x,1.6,z,rk)));
+   for(let r=0;r<5;r++){box(2.55,0.04,0.65,M(0xC9B79C,{roughness:.8}),0,0.6+r*0.55,0.3,rk);for(let c=0;c<6;c++){const m=cyl(0.09,0.16,M(0x333333),-1.0+c*0.4,0.7+r*0.55,0.3,rk);m.visible=false;o.cells.push(m)}}
+   box(2.7,0.08,0.08,dark,0,3.25,-0.25,rk);o.shuttle=new THREE.Group();rk.add(o.shuttle);box(0.09,1.4,0.09,M(0x2b2f33),0,2.5,-0.25,o.shuttle);box(0.25,0.15,0.25,blue,0,1.8,-0.25,o.shuttle);
+   box(2.7,0.85,0.5,grey,0,0.42,-0.55,g)}
+ else if(s.k==='hand'){ // pick&place gantry reaching over the conveyor to the sorting station behind
+   [-0.6,0.6].forEach(x=>box(0.09,1.5,0.09,alu,x,1.6,0.0,g));box(0.09,0.09,4.3,alu,0,2.35,0.45,g);box(1.3,0.09,0.09,alu,0,2.35,0,g);
+   o.car=new THREE.Group();g.add(o.car);box(0.18,0.18,0.18,M(0x2b2f33),0,2.35,0,o.car);o.head=box(0.07,0.7,0.07,alu,0,1.9,0,o.car);o.hy=1.9;box(0.16,0.08,0.16,blue,0,1.5,0,o.car)}
+ else if(s.k==='sort'){o.slides=[];for(let i=0;i<4;i++){const sl=box(0.32,0.04,0.9,i===3?M(0x7A0C14):alu,-0.6+i*0.4,1.0,0.25,g);sl.rotation.x=0.25;o.slides.push(sl)}
+   box(W-0.1,0.06,0.3,M(0x1d1d1f),0,0.95,-0.4,g);o.head=box(0.16,0.16,0.16,blue,0,1.3,-0.4,g);o.hy=1.3}
+ o.lamp=new THREE.Mesh(new THREE.SphereGeometry(0.1,16,12),new THREE.MeshStandardMaterial({color:0x444444,emissive:0x000000}));
+ const ly=s.k==='asrs'?3.5:2.2;o.lamp.position.set(s.k==='asrs'?1.25:0.75,ly,0.6);g.add(o.lamp);
+ const lb=label(`${s.i+1}  ${s.n}`,2.4);lb.position.set(0,s.k==='asrs'?4.0:2.75,0.3);g.add(lb);
  stObj.push(o)});
+// conveyor control cabinet at the front end + PC desk (as in the lab)
+box(2.6,1.55,1.0,M(0xE4E6E8),0,0.78,B+0.95);box(1.9,0.9,0.02,M(0x4a7a9a,{transparent:true,opacity:.55}),0,0.75,B+1.46);
+[0xc62828,0x888888,0x888888,0xc62828,0x2ea043].forEach((c,i)=>cyl(0.06,0.05,M(c),-0.6+i*0.25,1.42,B+1.47).rotation.x=Math.PI/2);
+box(0.18,0.18,0.05,M(0xF2C200),0.75,1.42,B+1.47);
+box(2.0,0.06,1.2,M(0xF4F4F4),-2.9,1.05,B+1.2);box(0.9,0.6,0.05,M(0x111111),-2.9,1.45,B+1.0);box(0.7,0.7,0.6,M(0x222222),-2.9,0.4,B+1.2);
 // pallets
 let pallets=[];
-function makePallet(s){const g=new THREE.Group();scene.add(g);box(0.7,0.08,0.7,M(0x2C2F33),0,0.68,0,g);box(0.16,0.02,0.1,M(0xE8B04A),0.28,0.73,0,g);
+function makePallet(s){const g=new THREE.Group();scene.add(g);box(0.62,0.08,0.62,M(0xEDEEEF,{roughness:.5}),0,0.68,0,g);box(0.14,0.03,0.1,M(0x222222),0.24,0.73,0.2,g);cyl(0.26,0.04,M(0x1F5FD1),0,0.74,0,g);
  const wp=new THREE.Group();wp.position.y=0.72;g.add(wp);const body=cyl(0.22,0.38,M(0xffffff),0,0.19,0,wp);const hole=cyl(0.09,0.02,M(0x111111),0,0.385,0,wp);const cap=cyl(0.16,0.12,M(0xE8B04A,{metalness:.8,roughness:.3}),0,0.44,0,wp);
  const nok=new THREE.Mesh(new THREE.TorusGeometry(0.27,0.03,8,24),new THREE.MeshBasicMaterial({color:0xff2020}));nok.rotation.x=Math.PI/2;nok.position.y=0.3;wp.add(nok);
  const p={id:pallets.length+1,s,g,wp,body,hole,cap,nok,part:null,hold:null,pass:-1,passS:0};pallets.push(p);return p}
@@ -268,7 +287,7 @@ function needs(st,p){const pt=p.part;
 function canStart(st,p){
  if(F.proc_down&&st.k==='proc')return false;if(F.hand_down&&st.k==='hand')return false;
  if(st.k==='dist'&&F.dist_mag)return false;
- if(st.k==='asrs'&&p.part&&(F.asrs_full||SIM.stock.length>=18))return false;
+ if(st.k==='asrs'&&p.part&&(F.asrs_full||SIM.stock.length>=CAP))return false;
  if(st.k==='hand'&&(SIM.sortQ.length>=1))return false;
  return true}
 function cycle(st){let c=st.ct;if(st.k==='assy'&&F.assy_slow)c/=0.4;return c}
@@ -285,18 +304,18 @@ function finish(st,p){const pt=p.part;
 function completeOrder(o){o.st='done';SIM.done++;SIM.leads.push(SIM.t-o.t0);if(SIM.leads.length>30)SIM.leads.shift();o.tDone=SIM.t}
 
 /* ---------- step ---------- */
-const GAP=0.95;
+const GAP=0.75;
 function step(dt){
  SIM.t+=dt;
  // auto orders
- if(SIM.autoOrd){SIM.ordT-=dt;const q=SIM.orders.filter(o=>o.st==='queued').length;if(SIM.ordT<=0&&q<6){SIM.ordT=10+Math.random()*8;const r=Math.random(),full=SIM.stock.length/18;if(r<0.1+0.4*full&&SIM.stock.length)addPick(SIM.stock[Math.random()*SIM.stock.length|0]);else addOrder(['red','silver','black'][Math.random()*3|0],Math.random()<0.6+0.4*full?'ship':'stock',1+(Math.random()*2|0))}}
+ if(SIM.autoOrd){SIM.ordT-=dt;const q=SIM.orders.filter(o=>o.st==='queued').length;if(SIM.ordT<=0&&q<6){SIM.ordT=10+Math.random()*8;const r=Math.random(),full=SIM.stock.length/CAP;if(r<0.1+0.4*full&&SIM.stock.length)addPick(SIM.stock[Math.random()*SIM.stock.length|0]);else addOrder(['red','silver','black'][Math.random()*3|0],Math.random()<0.6+0.4*full?'ship':'stock',1+(Math.random()*2|0))}}
  // stations work
  for(const st of ST){
   if(st.k==='sort'){ if(st.busy){st.t+=dt;st.work+=dt;if(st.t>=st.ct){const pt=st.cur;if(pt.stage==='nok'){SIM.chute.reject++;SIM.rej++;pt.o.st='rejected';pt.o.tDone=SIM.t}else{SIM.chute[pt.col]++;completeOrder(pt.o)}st.busy=0;st.done++;st.cur=null}}
     else if(SIM.sortQ.length&&!F.sort_jam){st.cur=SIM.sortQ.shift();st.busy=1;st.t=0}
     st.state=F.sort_jam?'down':st.busy?'working':'idle';continue}
   const p=st.pal;
-  if(p&&st.k==='asrs'&&p.part&&p.part.o.dest==='stock'&&SIM.stock.length>=18&&!F.asrs_full){p.part.o.dest='ship';log(`AS/RS full: order #${p.part.o.id} sent to shipping`,'i')}
+  if(p&&st.k==='asrs'&&p.part&&p.part.o.dest==='stock'&&SIM.stock.length>=CAP&&!F.asrs_full){p.part.o.dest='ship';log(`AS/RS full: order #${p.part.o.id} sent to shipping`,'i')}
   if(p){ if(!st.busy){ if(needs(st,p)&&canStart(st,p)){st.busy=1;st.t=0} else if(!needs(st,p)){release(st,p);continue} }
     if(st.busy){st.t+=dt;st.work+=dt;if(st.t>=cycle(st)){finish(st,p);st.busy=0;release(st,p)}}}
   const down=(st.k==='proc'&&F.proc_down)||(st.k==='hand'&&F.hand_down)||(st.k==='dist'&&F.dist_mag);
@@ -322,11 +341,11 @@ function sync(){
  const tt=SIM.t;
  ST.forEach((st,i)=>{const o=stObj[i];const col={working:0x2bd36a,waiting:0xf2a33a,down:0xff2a2a,idle:0x555555}[st.state];o.lamp.material.emissive.setHex(col);o.lamp.material.color.setHex(col);
   const w=st.busy?Math.sin(tt*6):0;
-  if(o.head)o.head.position.y=(st.k==='proc'?1.9:st.k==='hand'?1.7:st.k==='sort'?1.3:1.6)-Math.abs(w)*0.35;
+  if(o.head&&st.k!=='hand')o.head.position.y=o.hy-Math.abs(w)*0.3;if(o.turn&&st.busy)o.turn.rotation.y+=0.01*SIM.speed;if(o.swing)o.swing.rotation.y=st.busy?Math.sin(tt*2)*1.4:0;
   if(st.k==='proc'&&st.busy)o.head.rotation.y+=0.5;
-  if(o.arm)o.arm.position.z=-0.4-Math.abs(w)*0.4;
-  if(o.base){o.base.rotation.y=st.busy?Math.sin(tt*1.5)*1.2:0;o.l1.rotation.x=st.busy?-0.3+Math.sin(tt*2.3)*0.35:-0.2;o.l2.rotation.x=st.busy?Math.sin(tt*3)*0.3:0.4}
-  if(o.shuttle){o.shuttle.position.x=st.busy?Math.sin(tt*1.2)*0.8:0;o.shuttle.position.y=st.busy?1.2+Math.sin(tt*0.9)*0.35:1.4}
+  if(o.car){const ph=st.busy?(Math.sin(tt*1.6)+1)/2:0;o.car.position.z=-1.45+ph*(2.65+1.45)*(SIM.sortQ.length||(ST[6].busy)?1:0.0)+0;o.head.position.y=o.hy-(st.busy?Math.abs(Math.sin(tt*3.2))*0.3:0)}
+  if(o.base){o.base.rotation.y=st.busy?Math.sin(tt*1.3)*1.1:0;o.l1.rotation.x=st.busy?-0.25+Math.sin(tt*2.1)*0.3:-0.15;o.l2.rotation.x=st.busy?0.25+Math.sin(tt*2.7)*0.25:0.35;o.wr.rotation.y+=st.busy?0.05:0}
+  if(o.shuttle){o.shuttle.position.x=st.busy?Math.sin(tt*1.1)*1.0:0;o.shuttle.position.y=st.busy?-0.6+Math.sin(tt*0.8)*0.6:0}
   if(o.cells)o.cells.forEach((c,j)=>{const col=SIM.stock[j];c.visible=!!col;if(col){c.material.color.setHex(COL[col]);c.material.metalness=col==='silver'?.85:.1}});
   if(o.mag)o.mag.material.opacity=F.dist_mag?0.15:0.6;
  });}
@@ -359,7 +378,7 @@ function ui(){
  $('stT').innerHTML=ST.map(s=>`<tr><td>${s.i+1} ${s.n}</td><td><span class="tag ${s.state==='working'?'work':s.state==='down'?'down':s.state==='waiting'?'wait':''}">${s.state}</span></td><td class="mono">${cycle(s).toFixed(1)}s</td><td class="mono">${s.done}</td></tr>`).join('');
  const hrs=SIM.t/3600;$('kDone').textContent=SIM.done;$('kTp').textContent=hrs>0.005?Math.round(SIM.done/hrs):0;
  $('kLead').textContent=SIM.leads.length?(SIM.leads.reduce((a,b)=>a+b,0)/SIM.leads.length).toFixed(0):'—';
- $('kFpy').textContent=SIM.tested?Math.round(100*(SIM.done)/(SIM.done+SIM.rej||1))+'%':'—';$('kRej').textContent=SIM.rej;$('kStock').textContent=SIM.stock.length+'/18';
+ $('kFpy').textContent=SIM.tested?Math.round(100*(SIM.done)/(SIM.done+SIM.rej||1))+'%':'—';$('kRej').textContent=SIM.rej;$('kStock').textContent=SIM.stock.length+'/'+CAP;
  const u=ST.map(s=>SIM.t>0?s.work/SIM.t:0);const mx=Math.max(...u);const bi=u.indexOf(mx);
  $('uBars').innerHTML=ST.map((s,i)=>`<div class="row" style="justify-content:space-between;margin-top:6px;font-size:12px"><span>${s.i+1} ${s.n}</span></div><div class="bar ${i===bi&&mx>0.3?'bn':''}"><i style="width:${(u[i]*100).toFixed(0)}%"></i><span>${(u[i]*100).toFixed(0)}%</span></div>`).join('');
  $('bnNote').innerHTML=mx>0.3?`<b>Bottleneck: ${ST[bi].n}</b> (${(mx*100).toFixed(0)}% busy). Line output is limited to about ${Math.round(3600/cycle(ST[bi]))} parts per hour by its ${cycle(ST[bi]).toFixed(1)} s cycle.`:'The station with the highest utilisation is the bottleneck.';
