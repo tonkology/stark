@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>STARK Twin · FMS</title>
+<link rel="icon" href="/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0E0809;--panel:#170E10;--panel2:#1F1416;--line:#3A2629;--fg:#F3E9DF;--mut:#A8968E;--red:#7A0C14;--gold:#E8B04A;--ok:#4CC38A;--warn:#F2A33A;--bad:#E5484D;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 Inter,system-ui,sans-serif;overflow:hidden}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+header{height:54px;display:flex;align-items:center;gap:14px;padding:0 max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left));border-bottom:1px solid var(--line);background:linear-gradient(90deg,var(--red) 0,#3B070B 55%,var(--bg))}
+header .brand{font:800 18px Unbounded,sans-serif;letter-spacing:.06em;color:var(--gold)}
+header .sub{font-size:12px;color:#F3D9B0;opacity:.85}header .sp{flex:1}
+.sw{display:inline-flex;border:1px solid #E8B04A66;border-radius:99px;overflow:hidden}
+.sw a{color:#F3D9B0;text-decoration:none;font:600 11px Inter;letter-spacing:.06em;padding:5px 12px}
+.sw a.on{background:var(--gold);color:#2A1607}
+.pill{font:600 11px Inter;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:99px;border:1px solid var(--line);background:#0008}
+main{position:absolute;top:54px;left:0;right:0;bottom:0;display:grid;grid-template-columns:minmax(0,1fr) 420px}
+#view{position:relative;min-width:0;min-height:0}#view canvas{display:block;cursor:grab}
+.hud{position:absolute;left:14px;top:12px;display:flex;gap:8px;flex-wrap:wrap}
+.ctl{position:absolute;right:14px;bottom:12px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+aside{border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;color:var(--mut);font:600 12px Inter;padding:12px 6px;cursor:pointer;border-bottom:2px solid transparent}
+.tabs button.on{color:var(--gold);border-bottom-color:var(--gold)}
+.pane{flex:1;overflow:auto;padding:14px 16px 24px;display:none}.pane.on{display:block}
+h3{font:600 11px Inter;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:18px 0 8px}h3:first-child{margin-top:0}
+button.b{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font:600 13px Inter;cursor:pointer}
+button.b:hover{border-color:#E8B04A88}button.b.on{background:var(--gold);color:#2A1607;border-color:var(--gold)}
+button.go{background:#123D2A;border-color:#2D7A55}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+select,input[type=number]{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 8px;font:13px Inter}
+input[type=range]{width:100%;accent-color:var(--gold)}
+.note{font-size:12px;color:var(--mut);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0}.note b{color:var(--fg)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;font:600 10px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);padding:6px 4px;border-bottom:1px solid var(--line)}
+td{padding:5px 4px;border-bottom:1px solid #2a1c1e}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.tag{font:600 10px Inter;padding:2px 7px;border-radius:99px;background:#2a1c1e;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+.tag.work{background:#123D2A;color:#8fe3b8}.tag.down{background:#4A1013;color:#ffb4b6}.tag.wait{background:#3d2a0e;color:#f5c97a}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.stat b{display:block;font:600 19px "JetBrains Mono";color:var(--fg)}.stat span{font-size:11px;color:var(--mut)}
+.bar{height:16px;background:#2a1c1e;border-radius:4px;overflow:hidden;position:relative}
+.bar i{display:block;height:100%;background:var(--gold)}.bar.bn i{background:var(--bad)}
+.bar span{position:absolute;right:6px;top:0;font:600 10px/16px "JetBrains Mono";color:#fff}
+.fault{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #2a1c1e;align-items:flex-start}
+.fault input{margin-top:3px;accent-color:var(--bad)}.fault .d{font-size:12px;color:var(--mut)}
+.quiz{background:linear-gradient(135deg,#3B070B,#170E10);border:1px solid #E8B04A55;border-radius:12px;padding:12px}
+.res{margin-top:8px}.res.ok{color:var(--ok)}.res.no{color:var(--bad)}
+#log{font:11px/1.6 "JetBrains Mono";color:var(--mut);max-height:200px;overflow:auto;background:#0c0708;border:1px solid var(--line);border-radius:10px;padding:8px}
+#log .e{color:#ff9a9d}#log .i{color:#F3D9B0}
+.ord{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #2a1c1e;font-size:12px}
+.sw2{width:14px;height:14px;border-radius:50%;border:1px solid #0006}
+@media (max-width:900px){body{overflow:auto}main{position:static;display:block}#view{height:56vh}aside{border-left:0;border-top:1px solid var(--line)}.pane{overflow:visible}header .sub{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">STARK</div>
+  <div class="sub">Digital Twin · Lab 5 · FESTO FMS</div>
+  <div class="sp"></div>
+  <nav class="sw"><a href="/twin">MT AC</a><a href="/twin-fms" class="on">FMS</a></nav>
+</header>
+<main>
+  <section id="view">
+    <div class="hud">
+      <span class="pill" id="pRun">RUNNING</span>
+      <span class="pill mono" id="pClock">00:00</span>
+      <span class="pill mono" id="pWip">WIP 0</span>
+    </div>
+    <div class="ctl">
+      <button class="b" id="bRun">Pause</button>
+      <span class="pill">Speed</span>
+      <button class="b" data-sp="1">1×</button><button class="b on" data-sp="2">2×</button><button class="b" data-sp="5">5×</button>
+    </div>
+  </section>
+  <aside>
+    <div class="tabs">
+      <button data-t="ord" class="on">Orders</button><button data-t="st">Stations</button><button data-t="kpi">KPIs</button><button data-t="flt">Faults</button>
+    </div>
+
+    <div class="pane on" id="p-ord">
+      <h3>New production order</h3>
+      <div class="row">
+        <select id="oCol"><option value="red">Red body</option><option value="silver">Silver body</option><option value="black">Black body</option></select>
+        <input type="number" id="oQty" value="3" min="1" max="20" style="width:64px">
+        <select id="oDest"><option value="ship">→ Ship (Sorting)</option><option value="stock">→ Stock (AS/RS)</option></select>
+      </div>
+      <div class="row" style="margin-top:8px"><button class="b go" id="oAdd">Release order</button><button class="b" id="oPick">Ship 1 from stock</button></div>
+      <div class="row" style="margin-top:10px"><label class="row" style="gap:6px;font-size:12px;color:var(--mut)"><input type="checkbox" id="autoOrd" checked> Auto orders (random customer demand)</label></div>
+      <h3>Order queue</h3>
+      <div id="oList"></div>
+      <h3>How a part flows</h3>
+      <div class="note">
+        <b>1 Distribution</b> puts a cylinder body on an empty pallet. <b>2 Testing</b> checks height and colour. <b>3 Processing</b> drills and checks the bore. <b>4 Robot Assembly</b> fits piston, spring and cap. <b>5 AS/RS</b> stores stock orders or retrieves parts from stock. <b>6 Handling</b> takes finished or rejected parts off the pallet. <b>7 Sorting</b> sorts them by colour, rejects to their own chute.<br>Each pallet carries its order on its ID tag, so each station knows whether to work on it or let it pass.
+      </div>
+      <h3>Event log</h3>
+      <div id="log"></div>
+    </div>
+
+    <div class="pane" id="p-st">
+      <table><thead><tr><th>Station</th><th>State</th><th>Cycle</th><th>Done</th></tr></thead><tbody id="stT"></tbody></table>
+      <h3>Cycle times (seconds)</h3>
+      <div id="ctBox"></div>
+      <h3>Pallets on the loop</h3>
+      <div class="row"><span style="color:var(--mut);font-size:12px">Number of pallets</span><b class="mono" id="npV">6</b></div>
+      <input type="range" id="np" min="2" max="10" value="6">
+      <div class="note">Try it: add pallets until WIP stops increasing output. That is where the bottleneck limits the line, and extra pallets only make the queues longer.</div>
+    </div>
+
+    <div class="pane" id="p-kpi">
+      <div class="stats">
+        <div class="stat"><b id="kDone">0</b><span>parts finished</span></div>
+        <div class="stat"><b id="kTp">0</b><span>parts / hour</span></div>
+        <div class="stat"><b id="kLead">—</b><span>avg lead time s</span></div>
+        <div class="stat"><b id="kFpy">—</b><span>first-pass yield</span></div>
+        <div class="stat"><b id="kRej">0</b><span>rejects</span></div>
+        <div class="stat"><b id="kStock">0</b><span>in AS/RS</span></div>
+      </div>
+      <h3>Station utilisation</h3>
+      <div id="uBars"></div>
+      <div class="note" id="bnNote">The station with the highest utilisation is the bottleneck.</div>
+      <h3>Sorting chutes</h3>
+      <div class="stats" id="chutes"></div>
+    </div>
+
+    <div class="pane" id="p-flt">
+      <div class="quiz">
+        <b style="color:var(--gold)">Mystery fault</b>
+        <div style="font-size:12px;color:var(--mut);margin:4px 0 10px">A hidden fault is injected. Watch the stations, the queues and the KPIs, then name it.</div>
+        <div class="row"><button class="b" id="qStart">Inject mystery fault</button><button class="b" id="qGive" disabled>Reveal</button></div>
+        <div id="qBox" hidden style="margin-top:10px"><select id="qSel" style="width:100%"></select><div class="row" style="margin-top:8px"><button class="b" id="qCheck">Check answer</button></div><div class="res" id="qRes"></div></div>
+      </div>
+      <h3>Inject a fault</h3>
+      <div id="fList"></div>
+    </div>
+  </aside>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const COL={red:0xC0262D,silver:0xC9CED6,black:0x1b1b1d};
+const CSS={red:'#C0262D',silver:'#C9CED6',black:'#2a2a2d'};
+/* ---------- loop path (rounded rectangle) ---------- */
+const A=7.2,B=3.0,RC=1.3,PTS=[];
+(function(){const add=(x,z)=>PTS.push([x,z]);
+ for(let i=0;i<120;i++)add(-A+RC+(2*(A-RC))*i/120,B);
+ for(let i=0;i<30;i++){const a=Math.PI/2-Math.PI/2*i/30;add(A-RC+RC*Math.cos(a),B-RC+RC*Math.sin(a))}
+ for(let i=0;i<50;i++)add(A,B-RC-(2*(B-RC))*i/50);
+ for(let i=0;i<30;i++){const a=0-Math.PI/2*i/30;add(A-RC+RC*Math.cos(a),-B+RC+RC*Math.sin(a))}
+ for(let i=0;i<120;i++)add(A-RC-(2*(A-RC))*i/120,-B);
+ for(let i=0;i<30;i++){const a=-Math.PI/2-Math.PI/2*i/30;add(-A+RC+RC*Math.cos(a),-B+RC+RC*Math.sin(a))}
+ for(let i=0;i<50;i++)add(-A,-B+RC+(2*(B-RC))*i/50);
+ for(let i=0;i<30;i++){const a=Math.PI-Math.PI/2*i/30;add(-A+RC+RC*Math.cos(a),B-RC+RC*Math.sin(a))}
+})();
+const CUM=[0];for(let i=1;i<=PTS.length;i++){const p=PTS[i-1],q=PTS[i%PTS.length];CUM.push(CUM[i-1]+Math.hypot(q[0]-p[0],q[1]-p[1]))}
+const L=CUM[PTS.length];
+function at(s){s=((s%L)+L)%L;let lo=0,hi=PTS.length;while(hi-lo>1){const m=(lo+hi)>>1;if(CUM[m]<=s)lo=m;else hi=m}
+ const p=PTS[lo],q=PTS[(lo+1)%PTS.length],t=(s-CUM[lo])/(CUM[lo+1]-CUM[lo]);return{x:p[0]+(q[0]-p[0])*t,z:p[1]+(q[1]-p[1])*t,h:Math.atan2(q[1]-p[1],q[0]-p[0])}}
+function sOf(x,z){let best=0,bd=1e9;for(let i=0;i<PTS.length;i++){const d=Math.hypot(PTS[i][0]-x,PTS[i][1]-z);if(d<bd){bd=d;best=i}}return CUM[best]}
+
+/* ---------- stations ---------- */
+const ST=[
+ {k:'dist',n:'Distribution',x:-4.6,z:B,ct:4},
+ {k:'test',n:'Testing',x:-1.2,z:B,ct:3},
+ {k:'proc',n:'Processing',x:2.4,z:B,ct:5},
+ {k:'assy',n:'Robot Assembly',x:A,z:0,ct:9},
+ {k:'asrs',n:'AS/RS',x:3.0,z:-B,ct:6},
+ {k:'hand',n:'Handling',x:-0.8,z:-B,ct:4},
+ {k:'sort',n:'Sorting',x:-4.4,z:-B,ct:3},
+];
+ST.forEach((s,i)=>{s.i=i;s.s=sOf(s.x,s.z);s.busy=0;s.pal=null;s.t=0;s.work=0;s.done=0;s.state='idle'});
+
+/* ---------- sim state ---------- */
+const SIM={t:0,run:true,speed:2,autoOrd:true,ordT:0,orders:[],oid:0,done:0,leads:[],rej:0,tested:0,firstOK:0,stock:[],sortQ:[],chute:{red:0,silver:0,black:0,reject:0}};
+const F={};
+const FAULTS=[
+ {id:'dist_mag',st:0,name:'Distribution magazine empty',d:'No bodies to feed. Empty pallets keep circulating.'},
+ {id:'test_drift',st:1,name:'Testing height sensor drifted',d:'Good parts are measured too short. Many false rejects.'},
+ {id:'proc_down',st:2,name:'Processing drill motor failed',d:'Processing stops. Pallets queue in front of it.'},
+ {id:'assy_grip',st:3,name:'Robot gripper losing parts',d:'About half the assemblies fail and become rejects.'},
+ {id:'assy_slow',st:3,name:'Robot running at reduced speed',d:'The robot runs at 40% speed after a collision. Cycle time more than doubles.'},
+ {id:'asrs_full',st:4,name:'AS/RS rack full',d:'No free slot. Stock orders cannot be stored.'},
+ {id:'hand_down',st:5,name:'Handling vacuum lost',d:'Handling cannot pick parts off pallets.'},
+ {id:'sort_jam',st:6,name:'Sorting chute jammed',d:'Sorting stops, so Handling blocks and the pallets queue behind it.'},
+ {id:'conv_slow',st:-1,name:'Transfer belt worn',d:'The pallet conveyor runs at half speed.'},
+];
+for(let i=0;i<7;i++)SIM.stock.push(['red','silver','black'][i%3]);
+
+/* ---------- three ---------- */
+const view=$('view');
+const R3=new THREE.WebGLRenderer({antialias:true});R3.setPixelRatio(Math.min(devicePixelRatio,2));R3.shadowMap.enabled=true;R3.outputEncoding=THREE.sRGBEncoding;view.prepend(R3.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x120A0B);scene.fog=new THREE.Fog(0x120A0B,30,60);
+const cam=new THREE.PerspectiveCamera(40,1,0.1,200);cam.position.set(1.5,15,19);
+const ctl=new THREE.OrbitControls(cam,R3.domElement);ctl.target.set(1,0.6,0.5);ctl.enableDamping=true;ctl.maxPolarAngle=1.5;ctl.minDistance=6;ctl.maxDistance=40;
+scene.add(new THREE.HemisphereLight(0xfff2e6,0x2a1416,0.6));
+const sun=new THREE.DirectionalLight(0xffffff,0.85);sun.position.set(6,14,8);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-14,right:14,top:14,bottom:-14});scene.add(sun);
+const rim=new THREE.DirectionalLight(0xE8B04A,0.3);rim.position.set(-8,5,-8);scene.add(rim);
+const M=(c,o={})=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.55,metalness:.2},o));
+const alu=M(0xB9BEC4,{metalness:.7,roughness:.35}),grey=M(0xD7D9DC,{roughness:.7}),dark=M(0x2b2f33),blue=M(0x1F5FD1);
+function box(w,h,d,m,x,y,z,p=scene){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;p.add(o);return o}
+function cyl(r,h,m,x,y,z,p=scene){const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,24),m);o.position.set(x,y,z);o.castShadow=true;p.add(o);return o}
+function label(t,s=1.6,col='#F3D9B0'){const c=document.createElement('canvas');c.width=512;c.height=96;const g=c.getContext('2d');g.font='600 44px Inter, sans-serif';g.fillStyle=col;g.textAlign='center';g.textBaseline='middle';g.fillText(t,256,48);const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,depthTest:false}));sp.scale.set(s,s*0.1875,1);return sp}
+const floor=box(30,0.2,18,M(0xE9E9E9,{roughness:.95}),0,-0.1,0);floor.receiveShadow=true;
+// conveyor track: two rails along path + belt surface
+{const shape=[];const N=PTS.length;const g=new THREE.BufferGeometry();const pos=[],idx=[];
+ for(let i=0;i<=N;i++){const p=PTS[i%N],q=PTS[(i+1)%N];const h=Math.atan2(q[1]-p[1],q[0]-p[0]);const nx=-Math.sin(h),nz=Math.cos(h);
+   pos.push(p[0]+nx*0.42,0.62,p[1]+nz*0.42, p[0]-nx*0.42,0.62,p[1]-nz*0.42);
+   if(i<N){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2)}}
+ g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+ const belt=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:0x1d1d1f,roughness:.9,side:THREE.DoubleSide}));belt.receiveShadow=true;scene.add(belt);
+ const rail=(off)=>{const pts=[];for(let i=0;i<=N;i+=2){const p=PTS[i%N],q=PTS[(i+1)%N];const h=Math.atan2(q[1]-p[1],q[0]-p[0]);pts.push(new THREE.Vector3(p[0]-Math.sin(h)*off,0.66,p[1]+Math.cos(h)*off))}
+   const tube=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,true),400,0.05,6,true),alu);tube.castShadow=true;scene.add(tube)};
+ rail(0.48);rail(-0.48);
+ for(let i=0;i<N;i+=25){const p=PTS[i];box(0.1,0.6,0.1,alu,p[0],0.3,p[1])}}
+// stations
+const stObj=[];
+ST.forEach(s=>{const p=at(s.s);const nx=-Math.sin(p.h),nz=Math.cos(p.h);
+ // outward = away from loop centre
+ const out=(nx*p.x+nz*p.z)>0?1:-1;const ox=nx*out,oz=nz*out;
+ const g=new THREE.Group();g.position.set(p.x+ox*1.55,0,p.z+oz*1.55);g.rotation.y=-Math.atan2(oz,ox)+Math.PI/2;scene.add(g);
+ box(2.0,0.9,1.6,grey,0,0.45,0,g);box(2.05,0.05,1.65,alu,0,0.92,0,g);
+ const o={g,ox,oz};
+ // station-specific mechanism
+ if(s.k==='dist'){o.mag=cyl(0.22,1.1,M(0xdadde0,{transparent:true,opacity:.6}),0.3,1.5,0.1,g);o.arm=box(0.12,0.12,1.3,blue,-0.3,1.25,-0.4,g)}
+ else if(s.k==='test'){box(0.08,1.2,0.08,alu,0,1.5,-0.5,g);o.head=box(0.3,0.2,0.3,blue,0,1.6,-0.9,g)}
+ else if(s.k==='proc'){box(0.9,0.12,0.9,dark,0.3,1.0,0.2,g);o.head=cyl(0.12,0.5,M(0x666b70,{metalness:.8}),0,1.9,-0.95,g);box(0.1,1.4,0.1,alu,0,1.6,-0.45,g);box(0.1,0.1,0.6,alu,0,2.25,-0.7,g)}
+ else if(s.k==='assy'){cyl(0.3,0.3,M(0xe8e8e8),0,1.07,0,g);const b=new THREE.Group();b.position.set(0,1.2,0);g.add(b);box(0.3,0.35,0.3,M(0xf3f3f3),0,0.17,0,b);
+   const l1=new THREE.Group();l1.position.y=0.35;b.add(l1);box(0.16,0.9,0.16,M(0xf3f3f3),0,0.45,0,l1);const l2=new THREE.Group();l2.position.y=0.9;l1.add(l2);box(0.14,0.14,0.8,M(0xf3f3f3),0,0,-0.4,l2);box(0.1,0.25,0.1,M(0xE8B04A),0,-0.12,-0.8,l2);o.base=b;o.l1=l1;o.l2=l2}
+ else if(s.k==='asrs'){o.rack=new THREE.Group();o.rack.position.set(0,0.95,0.45);g.add(o.rack);box(2.0,1.6,0.05,alu,0,0.8,0.25,o.rack);o.cells=[];
+   for(let r=0;r<3;r++)for(let c=0;c<6;c++){const m=cyl(0.1,0.18,M(0x333333),-0.82+c*0.33,0.25+r*0.5,0.05,o.rack);m.visible=false;o.cells.push(m);box(0.3,0.03,0.4,alu,-0.82+c*0.33,0.14+r*0.5,0.05,o.rack)}
+   o.shuttle=box(0.3,0.25,0.3,blue,0,1.4,-0.3,g)}
+ else if(s.k==='hand'){box(1.8,0.1,0.1,alu,0,2.0,-0.3,g);[-0.85,0.85].forEach(x=>box(0.1,1.1,0.1,alu,x,1.45,-0.3,g));o.head=box(0.25,0.35,0.25,blue,0,1.7,-0.3,g)}
+ else if(s.k==='sort'){o.slides=[];for(let i=0;i<4;i++){const sl=box(0.35,0.05,1.1,i===3?M(0x7A0C14):alu,-0.7+i*0.47,0.85,0.25,g);sl.rotation.x=-0.25;o.slides.push(sl)}o.head=box(0.2,0.2,0.2,blue,0,1.3,-0.5,g)}
+ o.lamp=new THREE.Mesh(new THREE.SphereGeometry(0.11,16,12),new THREE.MeshStandardMaterial({color:0x444,emissive:0x000000}));o.lamp.position.set(0.85,2.15,0.65);g.add(o.lamp);box(0.04,1.2,0.04,alu,0.85,1.5,0.65,g);
+ const lb=label(`${s.i+1}  ${s.n}`,2.6);lb.position.set(0,2.75,0);g.add(lb);
+ stObj.push(o)});
+// pallets
+let pallets=[];
+function makePallet(s){const g=new THREE.Group();scene.add(g);box(0.7,0.08,0.7,M(0x2C2F33),0,0.68,0,g);box(0.16,0.02,0.1,M(0xE8B04A),0.28,0.73,0,g);
+ const wp=new THREE.Group();wp.position.y=0.72;g.add(wp);const body=cyl(0.22,0.38,M(0xffffff),0,0.19,0,wp);const hole=cyl(0.09,0.02,M(0x111111),0,0.385,0,wp);const cap=cyl(0.16,0.12,M(0xE8B04A,{metalness:.8,roughness:.3}),0,0.44,0,wp);
+ const nok=new THREE.Mesh(new THREE.TorusGeometry(0.27,0.03,8,24),new THREE.MeshBasicMaterial({color:0xff2020}));nok.rotation.x=Math.PI/2;nok.position.y=0.3;wp.add(nok);
+ const p={id:pallets.length+1,s,g,wp,body,hole,cap,nok,part:null,hold:null,pass:-1,passS:0};pallets.push(p);return p}
+function setPallets(n){while(pallets.length<n){const s=pallets.length?((pallets[pallets.length-1].s-1.3+L)%L):ST[0].s-0.2;let ok=true;for(const q of pallets)if(Math.abs(((q.s-s+L)%L))<0.95||Math.abs(((s-q.s+L)%L))<0.95)ok=false;makePallet(s)}
+ while(pallets.length>n){const i=pallets.findIndex(p=>!p.part&&p.hold==null);if(i<0)break;scene.remove(pallets[i].g);pallets.splice(i,1)}}
+for(let i=0;i<6;i++)makePallet((ST[0].s-0.3-i*1.4+L)%L);
+
+/* ---------- orders ---------- */
+function addOrder(col,dest,qty=1){for(let i=0;i<qty;i++){SIM.orders.push({id:++SIM.oid,col,dest,kind:'make',st:'queued',t0:SIM.t})}log(`Order: ${qty}× ${col} → ${dest}`,'i')}
+function addPick(col){SIM.orders.push({id:++SIM.oid,col,dest:'ship',kind:'pick',st:'queued',t0:SIM.t});log(`Order: ship 1× ${col} from stock`,'i')}
+
+/* ---------- station logic ---------- */
+function needs(st,p){const pt=p.part;
+ switch(st.k){
+  case 'dist': return !pt && SIM.orders.some(o=>o.kind==='make'&&o.st==='queued');
+  case 'test': return pt&&pt.stage==='body';
+  case 'proc': return pt&&pt.stage==='tested';
+  case 'assy': return pt&&pt.stage==='drilled';
+  case 'asrs': return (pt&&pt.stage==='assembled'&&pt.o.dest==='stock') || (!pt && SIM.orders.some(o=>o.kind==='pick'&&o.st==='queued'&&SIM.stock.includes(o.col)));
+  case 'hand': return pt&&((pt.stage==='assembled'&&pt.o.dest==='ship')||pt.stage==='nok');
+ } return false}
+function canStart(st,p){
+ if(F.proc_down&&st.k==='proc')return false;if(F.hand_down&&st.k==='hand')return false;
+ if(st.k==='dist'&&F.dist_mag)return false;
+ if(st.k==='asrs'&&p.part&&(F.asrs_full||SIM.stock.length>=18))return false;
+ if(st.k==='hand'&&(SIM.sortQ.length>=1))return false;
+ return true}
+function cycle(st){let c=st.ct;if(st.k==='assy'&&F.assy_slow)c/=0.4;return c}
+function finish(st,p){const pt=p.part;
+ switch(st.k){
+  case 'dist':{const o=SIM.orders.find(o=>o.kind==='make'&&o.st==='queued');o.st='in work';p.part={o,col:o.col,stage:'body'};break}
+  case 'test':{SIM.tested++;const bad=Math.random()<(F.test_drift?0.45:0.03);pt.stage=bad?'nok':'tested';if(!bad)SIM.firstOK++;else{pt.o.why='height out of tolerance';log(`Testing: pallet ${p.id} ${pt.col} rejected (height)`,'e')}break}
+  case 'proc':pt.stage='drilled';break;
+  case 'assy':{if(F.assy_grip&&Math.random()<0.5){pt.stage='nok';pt.o.why='assembly failed';log(`Robot: assembly failed on pallet ${p.id}`,'e')}else pt.stage='assembled';break}
+  case 'asrs':{if(pt){SIM.stock.push(pt.col);completeOrder(pt.o);p.part=null}else{const o=SIM.orders.find(o=>o.kind==='pick'&&o.st==='queued'&&SIM.stock.includes(o.col));SIM.stock.splice(SIM.stock.indexOf(o.col),1);o.st='in work';p.part={o,col:o.col,stage:'assembled'}}break}
+  case 'hand':{SIM.sortQ.push(pt);p.part=null;break}
+ }
+ st.done++}
+function completeOrder(o){o.st='done';SIM.done++;SIM.leads.push(SIM.t-o.t0);if(SIM.leads.length>30)SIM.leads.shift();o.tDone=SIM.t}
+
+/* ---------- step ---------- */
+const GAP=0.95;
+function step(dt){
+ SIM.t+=dt;
+ // auto orders
+ if(SIM.autoOrd){SIM.ordT-=dt;const q=SIM.orders.filter(o=>o.st==='queued').length;if(SIM.ordT<=0&&q<6){SIM.ordT=10+Math.random()*8;const r=Math.random(),full=SIM.stock.length/18;if(r<0.1+0.4*full&&SIM.stock.length)addPick(SIM.stock[Math.random()*SIM.stock.length|0]);else addOrder(['red','silver','black'][Math.random()*3|0],Math.random()<0.6+0.4*full?'ship':'stock',1+(Math.random()*2|0))}}
+ // stations work
+ for(const st of ST){
+  if(st.k==='sort'){ if(st.busy){st.t+=dt;st.work+=dt;if(st.t>=st.ct){const pt=st.cur;if(pt.stage==='nok'){SIM.chute.reject++;SIM.rej++;pt.o.st='rejected';pt.o.tDone=SIM.t}else{SIM.chute[pt.col]++;completeOrder(pt.o)}st.busy=0;st.done++;st.cur=null}}
+    else if(SIM.sortQ.length&&!F.sort_jam){st.cur=SIM.sortQ.shift();st.busy=1;st.t=0}
+    st.state=F.sort_jam?'down':st.busy?'working':'idle';continue}
+  const p=st.pal;
+  if(p&&st.k==='asrs'&&p.part&&p.part.o.dest==='stock'&&SIM.stock.length>=18&&!F.asrs_full){p.part.o.dest='ship';log(`AS/RS full: order #${p.part.o.id} sent to shipping`,'i')}
+  if(p){ if(!st.busy){ if(needs(st,p)&&canStart(st,p)){st.busy=1;st.t=0} else if(!needs(st,p)){release(st,p);continue} }
+    if(st.busy){st.t+=dt;st.work+=dt;if(st.t>=cycle(st)){finish(st,p);st.busy=0;release(st,p)}}}
+  const down=(st.k==='proc'&&F.proc_down)||(st.k==='hand'&&F.hand_down)||(st.k==='dist'&&F.dist_mag);
+  st.state=st.busy?'working':down?'down':st.pal?'waiting':'idle';
+ }
+ // move pallets
+ const v=1.1*(F.conv_slow?0.5:1)*dt;
+ const order=[...pallets].sort((a,b)=>a.s-b.s);
+ for(let k=0;k<order.length;k++){const p=order[k];if(p.hold!=null)continue;
+  const ahead=order[(k+1)%order.length];let room=order.length>1?((ahead.s-p.s+L)%L)-GAP:1e9;let mv=Math.max(0,Math.min(v,room));
+  // gates
+  for(const st of ST){if(st.k==='sort')continue;const d=(st.s-p.s+L)%L;if(d<=mv+1e-6&&p.pass!==st.i){
+     if(needs(st,p)){ if(!st.pal){mv=d;st.pal=p;p.hold=st.i}else mv=Math.min(mv,Math.max(0,d-GAP)) }}}
+  p.s=(p.s+mv)%L; if(p.pass>=0){p.passS+=mv;if(p.passS>0.6)p.pass=-1}}
+}
+function release(st,p){st.pal=null;p.hold=null;p.pass=st.i;p.passS=0}
+
+/* ---------- render sync ---------- */
+function sync(){
+ for(const p of pallets){const a=at(p.s);p.g.position.set(a.x,0,a.z);p.g.rotation.y=-a.h;
+  const pt=p.part;p.wp.visible=!!pt;if(pt){p.body.material.color.setHex(COL[pt.col]);p.body.material.metalness=pt.col==='silver'?0.85:0.1;
+   p.hole.visible=['drilled','assembled'].includes(pt.stage)||(pt.stage==='nok'&&pt.o.why==='assembly failed');p.cap.visible=pt.stage==='assembled';p.nok.visible=pt.stage==='nok'}}
+ const tt=SIM.t;
+ ST.forEach((st,i)=>{const o=stObj[i];const col={working:0x2bd36a,waiting:0xf2a33a,down:0xff2a2a,idle:0x555555}[st.state];o.lamp.material.emissive.setHex(col);o.lamp.material.color.setHex(col);
+  const w=st.busy?Math.sin(tt*6):0;
+  if(o.head)o.head.position.y=(st.k==='proc'?1.9:st.k==='hand'?1.7:st.k==='sort'?1.3:1.6)-Math.abs(w)*0.35;
+  if(st.k==='proc'&&st.busy)o.head.rotation.y+=0.5;
+  if(o.arm)o.arm.position.z=-0.4-Math.abs(w)*0.4;
+  if(o.base){o.base.rotation.y=st.busy?Math.sin(tt*1.5)*1.2:0;o.l1.rotation.x=st.busy?-0.3+Math.sin(tt*2.3)*0.35:-0.2;o.l2.rotation.x=st.busy?Math.sin(tt*3)*0.3:0.4}
+  if(o.shuttle){o.shuttle.position.x=st.busy?Math.sin(tt*1.2)*0.8:0;o.shuttle.position.y=st.busy?1.2+Math.sin(tt*0.9)*0.35:1.4}
+  if(o.cells)o.cells.forEach((c,j)=>{const col=SIM.stock[j];c.visible=!!col;if(col){c.material.color.setHex(COL[col]);c.material.metalness=col==='silver'?.85:.1}});
+  if(o.mag)o.mag.material.opacity=F.dist_mag?0.15:0.6;
+ });}
+
+/* ---------- UI ---------- */
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='p-'+b.dataset.t))});
+$('oAdd').onclick=()=>addOrder($('oCol').value,$('oDest').value,Math.max(1,Math.min(20,+$('oQty').value||1)));
+$('oPick').onclick=()=>{const c=$('oCol').value;if(!SIM.stock.includes(c))return log(`No ${c} part in stock`,'e');addPick(c)};
+$('autoOrd').onchange=e=>SIM.autoOrd=e.target.checked;
+$('bRun').onclick=()=>{SIM.run=!SIM.run;$('bRun').textContent=SIM.run?'Pause':'Run'};
+document.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{SIM.speed=+b.dataset.sp;document.querySelectorAll('[data-sp]').forEach(x=>x.classList.toggle('on',x===b))});
+$('np').oninput=e=>{setPallets(+e.target.value);$('npV').textContent=pallets.length};
+$('ctBox').innerHTML=ST.map(s=>`<div class="row" style="justify-content:space-between;margin-top:6px"><span style="font-size:12px">${s.i+1} ${s.n}</span><b class="mono" id="ctv${s.i}">${s.ct}s</b></div><input type="range" min="1" max="15" step="0.5" value="${s.ct}" data-ct="${s.i}">`).join('');
+document.querySelectorAll('[data-ct]').forEach(r=>r.oninput=()=>{const s=ST[+r.dataset.ct];s.ct=+r.value;$('ctv'+s.i).textContent=s.ct+'s'});
+$('fList').innerHTML=FAULTS.map(f=>`<label class="fault"><input type="checkbox" data-f="${f.id}"><div><b>${f.name}</b><div class="d">${f.d}</div></div></label>`).join('');
+let mystery=null;
+document.querySelectorAll('[data-f]').forEach(c=>c.onchange=()=>{if(mystery){c.checked=!!F[c.dataset.f];return}F[c.dataset.f]=c.checked;log((c.checked?'Fault injected: ':'Fault cleared: ')+FAULTS.find(f=>f.id===c.dataset.f).name,c.checked?'e':'i')});
+$('qSel').innerHTML='<option value="">Which fault is it?</option>'+FAULTS.map(f=>`<option value="${f.id}">${f.name}</option>`).join('');
+$('qStart').onclick=()=>{Object.keys(F).forEach(k=>F[k]=false);document.querySelectorAll('[data-f]').forEach(c=>{c.checked=false;c.disabled=true});mystery=FAULTS[Math.random()*FAULTS.length|0].id;F[mystery]=true;$('qBox').hidden=false;$('qGive').disabled=false;$('qRes').textContent='';log('Mystery fault injected','e')};
+$('qCheck').onclick=()=>{const v=$('qSel').value;if(!v)return;if(v===mystery){$('qRes').textContent='Correct. Fault cleared.';$('qRes').className='res ok';endM(true)}else{$('qRes').textContent='Not that one. Check the station states and the KPIs.';$('qRes').className='res no'}};
+$('qGive').onclick=()=>{$('qRes').textContent='It was: '+FAULTS.find(f=>f.id===mystery).name;$('qRes').className='res';endM(true)};
+function endM(clear){if(clear)F[mystery]=false;mystery=null;document.querySelectorAll('[data-f]').forEach(c=>{c.disabled=false;c.checked=!!F[c.dataset.f]});$('qGive').disabled=true}
+function log(t,c=''){const el=$('log');const d=document.createElement('div');d.className=c;d.textContent=`${fmt(SIM.t)}  ${t}`;el.prepend(d);while(el.childNodes.length>150)el.lastChild.remove()}
+const fmt=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+function ui(){
+ $('pClock').textContent=fmt(SIM.t);const wip=pallets.filter(p=>p.part).length+SIM.sortQ.length;$('pWip').textContent='WIP '+wip;
+ $('pRun').textContent=SIM.run?'RUNNING':'PAUSED';$('pRun').style.color=SIM.run?'var(--ok)':'var(--gold)';
+ const os=SIM.orders.filter(o=>o.st!=='done'&&o.st!=='rejected').slice(0,12).concat(SIM.orders.filter(o=>o.st==='done'||o.st==='rejected').slice(-4).reverse());
+ $('oList').innerHTML=os.map(o=>`<div class="ord"><span class="sw2" style="background:${CSS[o.col]}"></span><span>#${o.id} ${o.kind==='pick'?'from stock':'make'} → ${o.dest}${o.why&&o.st==='rejected'?' · '+o.why:''}</span><span class="tag ${o.st==='in work'?'work':o.st==='rejected'?'down':o.st==='queued'?'wait':''}">${o.st}</span></div>`).join('')||'<div class="note">No orders. Release one above.</div>';
+ $('stT').innerHTML=ST.map(s=>`<tr><td>${s.i+1} ${s.n}</td><td><span class="tag ${s.state==='working'?'work':s.state==='down'?'down':s.state==='waiting'?'wait':''}">${s.state}</span></td><td class="mono">${cycle(s).toFixed(1)}s</td><td class="mono">${s.done}</td></tr>`).join('');
+ const hrs=SIM.t/3600;$('kDone').textContent=SIM.done;$('kTp').textContent=hrs>0.005?Math.round(SIM.done/hrs):0;
+ $('kLead').textContent=SIM.leads.length?(SIM.leads.reduce((a,b)=>a+b,0)/SIM.leads.length).toFixed(0):'—';
+ $('kFpy').textContent=SIM.tested?Math.round(100*(SIM.done)/(SIM.done+SIM.rej||1))+'%':'—';$('kRej').textContent=SIM.rej;$('kStock').textContent=SIM.stock.length+'/18';
+ const u=ST.map(s=>SIM.t>0?s.work/SIM.t:0);const mx=Math.max(...u);const bi=u.indexOf(mx);
+ $('uBars').innerHTML=ST.map((s,i)=>`<div class="row" style="justify-content:space-between;margin-top:6px;font-size:12px"><span>${s.i+1} ${s.n}</span></div><div class="bar ${i===bi&&mx>0.3?'bn':''}"><i style="width:${(u[i]*100).toFixed(0)}%"></i><span>${(u[i]*100).toFixed(0)}%</span></div>`).join('');
+ $('bnNote').innerHTML=mx>0.3?`<b>Bottleneck: ${ST[bi].n}</b> (${(mx*100).toFixed(0)}% busy). Line output is limited to about ${Math.round(3600/cycle(ST[bi]))} parts per hour by its ${cycle(ST[bi]).toFixed(1)} s cycle.`:'The station with the highest utilisation is the bottleneck.';
+ $('chutes').innerHTML=['red','silver','black','reject'].map(k=>`<div class="stat"><b>${SIM.chute[k]}</b><span>${k}</span></div>`).join('');
+}
+function resize(){const r=view.getBoundingClientRect();R3.setSize(r.width,r.height);cam.aspect=r.width/r.height;cam.updateProjectionMatrix()}
+addEventListener('resize',resize);resize();
+let last=performance.now(),uiT=0;
+function frame(now){const dt=Math.min(0.05,(now-last)/1000);last=now;
+ if(SIM.run){const n=SIM.speed;for(let i=0;i<n;i++)step(dt)}
+ sync();uiT+=dt;if(uiT>0.25){uiT=0;ui()}
+ ctl.update();R3.render(scene,cam);requestAnimationFrame(frame)}
+addOrder('red','ship',2);addOrder('silver','stock',1);addOrder('black','ship',1);
+log('FMS twin started with 6 pallets','i');
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
