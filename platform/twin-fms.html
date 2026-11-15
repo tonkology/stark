@@ -53,6 +53,9 @@ td{padding:5px 4px;border-bottom:1px solid #2a1c1e}
 .res{margin-top:8px}.res.ok{color:var(--ok)}.res.no{color:var(--bad)}
 #log{font:11px/1.6 "JetBrains Mono";color:var(--mut);max-height:200px;overflow:auto;background:#0c0708;border:1px solid var(--line);border-radius:10px;padding:8px}
 #log .e{color:#ff9a9d}#log .i{color:#F3D9B0}
+#tp{background:#0b1a12;border:1px solid #234a33;border-radius:10px;padding:6px 0;max-height:210px;overflow:auto;font-size:11px;line-height:1.55;color:#7fbf98}
+#tp div{padding:0 10px;white-space:pre}#tp div.cur{background:#1f6b44;color:#eafff2}
+#jt td{padding:3px 4px}#jt .jb{height:6px;background:#2a1c1e;border-radius:3px;position:relative;min-width:80px}#jt .jb i{position:absolute;top:0;bottom:0;background:var(--gold);border-radius:3px}
 .ord{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #2a1c1e;font-size:12px}
 .sw2{width:14px;height:14px;border-radius:50%;border:1px solid #0006}
 @media (max-width:900px){body{overflow:auto}main{position:static;display:block}#view{height:56vh}aside{border-left:0;border-top:1px solid var(--line)}.pane{overflow:visible}header .sub{display:none}}
@@ -80,7 +83,7 @@ td{padding:5px 4px;border-bottom:1px solid #2a1c1e}
   </section>
   <aside>
     <div class="tabs">
-      <button data-t="ord" class="on">Orders</button><button data-t="st">Stations</button><button data-t="kpi">KPIs</button><button data-t="flt">Faults</button>
+      <button data-t="ord" class="on">Orders</button><button data-t="st">Stations</button><button data-t="rob">Robot</button><button data-t="kpi">KPIs</button><button data-t="flt">Faults</button>
     </div>
 
     <div class="pane on" id="p-ord">
@@ -110,6 +113,22 @@ td{padding:5px 4px;border-bottom:1px solid #2a1c1e}
       <div class="row"><span style="color:var(--mut);font-size:12px">Number of pallets</span><b class="mono" id="npV">6</b></div>
       <input type="range" id="np" min="2" max="10" value="6">
       <div class="note">Try it: add pallets until WIP stops increasing output. That is where the bottleneck limits the line, and extra pallets only make the queues longer.</div>
+    </div>
+
+    <div class="pane" id="p-rob">
+      <div class="row" style="justify-content:space-between"><b style="color:var(--gold)">D · Robot Assembly</b><button class="b" id="camRob">Focus camera</button></div>
+      <div class="row" style="margin-top:8px;gap:6px"><span class="tag" id="rState">idle</span><span style="font-size:12px;color:var(--mut)" id="rStep">Waiting for a drilled body</span></div>
+      <div class="bar" style="margin-top:8px"><i id="rProg" style="width:0%"></i><span id="rProgT"></span></div>
+      <h3>Teach pendant · program ASSY</h3>
+      <div id="tp" class="mono"></div>
+      <h3>Joints</h3>
+      <table class="mono" style="font-size:12px"><tbody id="jt"></tbody></table>
+      <div class="row" style="margin-top:8px;font-size:12px;gap:14px"><span>Gripper: <b id="rGrip">open</b></span><span>Holding: <b id="rHeld">—</b></span></div>
+      <h3>Magazines</h3>
+      <div id="mags"></div>
+      <div class="row" style="margin-top:8px"><button class="b" id="refill">Refill all</button><label class="row" style="gap:6px;font-size:12px;color:var(--mut)"><input type="checkbox" id="autoRefill" checked> Operator refills empty magazines</label></div>
+      <h3>What the robot does</h3>
+      <div class="note">The cell builds a pneumatic cylinder in five steps: <b>1</b> take the drilled body from the pallet into the assembly fixture, <b>2</b> insert a piston (black body gets a silver piston, the others a black one), <b>3</b> insert the spring, <b>4</b> place the cap and screw it a quarter turn, <b>5</b> put the finished cylinder back on the pallet.<br>Each pick waits for its magazine's part-ready signal, so an empty or jammed magazine stops the program at that line.<br><br><b>Twin model, not the station's real program.</b> Positions, timings and the program text are illustrative.</div>
     </div>
 
     <div class="pane" id="p-kpi">
@@ -170,7 +189,7 @@ const ST=[
  {k:'dist',n:'Distribution',L:'A',x:0,z:-B,ct:4,w:2.4},
  {k:'test',n:'Testing',L:'C',x:-A,z:3.1,ct:3,w:1.4},
  {k:'proc',n:'Processing',L:'B',x:-A,z:-0.6,ct:5,w:2.6},
- {k:'assy',n:'Robot Assembly',L:'D',x:A,z:3.2,ct:9,w:2.0},
+ {k:'assy',n:'Robot Assembly',L:'D',x:A,z:3.2,ct:16,w:2.0},
  {k:'asrs',n:'AS/RS',L:'E',x:A,z:-0.5,ct:6},
  {k:'hand',n:'Handling',L:'F',x:A,z:-3.4,ct:4,w:1.6},
  {k:'sort',n:'Sorting',L:'F',x:A,z:-3.4,ct:3,off:3.05,w:1.4},
@@ -178,7 +197,7 @@ const ST=[
 ST.forEach((s,i)=>{s.i=i;s.s=sOf(s.x,s.z);s.busy=0;s.pal=null;s.t=0;s.work=0;s.done=0;s.state='idle'});
 
 /* ---------- sim state ---------- */
-const SIM={t:0,run:true,speed:2,autoOrd:true,ordT:0,orders:[],oid:0,done:0,leads:[],rej:0,tested:0,firstOK:0,stock:[],sortQ:[],chute:{red:0,silver:0,black:0,reject:0}};
+const SIM={autoRefill:true,refT:{},t:0,run:true,speed:2,autoOrd:true,ordT:0,orders:[],oid:0,done:0,leads:[],rej:0,tested:0,firstOK:0,stock:[],sortQ:[],chute:{red:0,silver:0,black:0,reject:0}};
 const F={};
 const FAULTS=[
  {id:'dist_mag',st:0,name:'Distribution magazine empty',d:'No bodies to feed. Empty pallets keep circulating.'},
@@ -186,6 +205,8 @@ const FAULTS=[
  {id:'proc_down',st:2,name:'Processing drill motor failed',d:'Processing stops. Pallets queue in front of it.'},
  {id:'assy_grip',st:3,name:'Robot gripper losing parts',d:'About half the assemblies fail and become rejects.'},
  {id:'assy_slow',st:3,name:'Robot running at reduced speed',d:'The robot runs at 40% speed after a collision. Cycle time more than doubles.'},
+ {id:'assy_cap',st:3,name:'Cap magazine separator jammed',d:'The robot stops at the cap pick and waits for the cap-ready signal.'},
+ {id:'assy_spring',st:3,name:'Spring magazine sensor dead',d:'The spring-present sensor never switches. The robot waits at the spring pick.'},
  {id:'asrs_full',st:4,name:'AS/RS rack full',d:'No free slot. Stock orders cannot be stored.'},
  {id:'hand_down',st:5,name:'Handling vacuum lost',d:'Handling cannot pick parts off pallets.'},
  {id:'sort_jam',st:6,name:'Sorting chute jammed',d:'Sorting stops, so Handling blocks and the pallets queue behind it.'},
@@ -217,6 +238,114 @@ const floor=box(30,0.2,18,M(0xE9E9E9,{roughness:.95}),0,-0.1,0);floor.receiveSha
  [-1,1].forEach(sz=>{rl(0,sz*(B+0.45),2*A+0.95,0.05);rl(0,sz*(B-0.45),2*A-0.95,0.05)});
  for(let i=0;i<N;i+=25){const p=PTS[i];box(0.1,0.95,0.1,alu,p[0],0.47,p[1])}
  [-1,1].forEach(sx=>[-0.5,0.5].forEach(d=>box(0.06,0.16,2*(B-RC),alu,sx*A+d,0.88,0)));[-1,1].forEach(sz=>box(2*(A-RC)+0.9,0.16,0.06,alu,0,0.88,sz*(B+0.5)))}
+/* ---------- D · robot assembly cell ---------- */
+// Station-local frame: x along the belt, -z toward the belt (pallet at z=-1.45), plate top y=0.88.
+const RB=[0,0.91,-0.25], SH=RB[1]+0.55, L1=0.8, L2=0.75, TOOL=0.4, UNIT_MM=320;
+const OBJ={body:{h:0.38,r:0.22},piston:{h:0.30,r:0.09},spring:{h:0.22,r:0.08},cap:{h:0.08,r:0.16},assembled:{h:0.46,r:0.22}};
+const CELL={FIX:[0.62,1.0,0.28],PIS:{silver:[-0.55,1.0,0.3],black:[-0.82,1.0,0.3]},SPR:[0.58,1.0,0.9],CAP:[-0.6,1.0,0.9],PAL:[0,1.08,-1.45]};
+const MAG={silver:12,black:12,spring:16,cap:16}, MAGMAX={silver:12,black:12,spring:16,cap:16};
+let ROB=null; // scene refs
+function buildRobotCell(g,o,W){
+  const white=M(0xF1F1EF,{roughness:.4}), steel=M(0xBFC4C9,{metalness:.85,roughness:.3}), glass=M(0xdfe6ec,{transparent:true,opacity:.35,roughness:.1});
+  // rear plate extension with the CR controller and teach pendant underneath
+  box(W,0.85,1.2,grey,0,0.425,1.3,g);box(W+0.05,0.06,1.25,alu,0,0.88,1.3,g);
+  box(0.75,0.42,0.5,M(0x3a3f45),-0.42,0.3,1.72,g);box(0.18,0.06,0.02,M(0x2ea043,{emissive:0x0a3a1a}),-0.55,0.45,1.98,g);
+  box(0.22,0.3,0.06,M(0x2b2f33),0.35,0.62,1.95,g);box(0.09,0.09,0.03,M(0xd00000),0.35,0.72,1.99,g);
+  // assembly fixture (retainer) with part sensor
+  box(0.5,0.1,0.5,alu,CELL.FIX[0],0.94,CELL.FIX[2],g);cyl(0.26,0.06,M(0x2b2f33),CELL.FIX[0],0.98,CELL.FIX[2],g);box(0.05,0.06,0.05,blue,CELL.FIX[0]+0.28,1.02,CELL.FIX[2],g);
+  // piston magazines (two slides), spring magazine (blue), cap magazine with separator
+  const mags={};
+  [['silver',0xC9CED6],['black',0x1b1b1d]].forEach(([k,c])=>{const P=CELL.PIS[k];box(0.2,0.04,0.2,alu,P[0],0.95,P[2],g);cyl(0.11,0.7,glass,P[0],1.38,P[2],g);
+     const f=cyl(0.085,0.6,M(c,{metalness:k==='silver'?.85:.1}),P[0],1.33,P[2],g);mags[k]={fill:f,y0:1.03,h:0.6}});
+  {const P=CELL.SPR;box(0.24,0.05,0.24,alu,P[0],0.95,P[2],g);cyl(0.13,0.8,M(0x2D6FD8,{transparent:true,opacity:.8}),P[0],1.42,P[2],g);
+     const f=cyl(0.09,0.7,steel,P[0],1.38,P[2],g);mags.spring={fill:f,y0:1.03,h:0.7}}
+  {const P=CELL.CAP;box(0.3,0.05,0.3,alu,P[0],0.95,P[2],g);cyl(0.19,0.6,glass,P[0],1.32,P[2],g);
+     const f=cyl(0.165,0.5,M(0xE8B04A,{metalness:.8,roughness:.3}),P[0],1.28,P[2],g);mags.cap={fill:f,y0:1.03,h:0.5};
+     const sep=box(0.26,0.06,0.06,blue,P[0]+0.05,1.06,P[2]+0.24,g);mags.sep=sep}
+  // reject slide
+  const ch=box(0.32,0.04,0.8,alu,-0.75,1.02,-0.45,g);ch.rotation.x=-0.22;
+  // fixture contents
+  const fx=new THREE.Group();fx.position.set(CELL.FIX[0],0,CELL.FIX[2]);g.add(fx);const fix={
+    body:cyl(OBJ.body.r,OBJ.body.h,M(0xffffff),0,1.0+OBJ.body.h/2,0,fx),
+    piston:cyl(OBJ.piston.r,OBJ.piston.h,M(0x1b1b1d),0,1.08+OBJ.piston.h/2,0,fx),
+    spring:cyl(OBJ.spring.r,OBJ.spring.h,steel,0,1.24+OBJ.spring.h/2,0,fx),
+    cap:cyl(OBJ.cap.r,OBJ.cap.h,M(0xE8B04A,{metalness:.8,roughness:.3}),0,1.38+OBJ.cap.h/2,0,fx)};
+  // 6-axis arm (Mitsubishi RV type), white, FESTO-blue decal
+  const base=new THREE.Group();base.position.set(RB[0],RB[1],RB[2]);g.add(base);
+  cyl(0.27,0.08,M(0x2b2f33),0,0.04,0,base);cyl(0.24,0.14,white,0,0.15,0,base);
+  const j1=new THREE.Group();j1.position.y=0.22;base.add(j1);cyl(0.2,0.2,white,0,0.1,0,j1);box(0.34,0.26,0.3,white,0,0.24,0.02,j1);
+  const j2=new THREE.Group();j2.position.y=SH-RB[1]-0.22;j1.add(j2);const sc=cyl(0.15,0.42,white,0,0,0,j2);sc.rotation.z=Math.PI/2;
+  box(0.2,L1,0.22,white,0.06,L1/2,0,j2);box(0.012,0.5,0.1,blue,0.165,L1/2,0,j2);
+  const j3=new THREE.Group();j3.position.y=L1;j2.add(j3);const ec=cyl(0.12,0.36,white,0,0,0,j3);ec.rotation.z=Math.PI/2;
+  box(0.17,0.17,L2,white,0.03,0,-L2/2,j3);box(0.01,0.07,0.35,blue,0.12,0,-L2/2,j3);
+  const j5=new THREE.Group();j5.position.z=-L2;j3.add(j5);const wc=cyl(0.08,0.2,white,0,0,0,j5);wc.rotation.z=Math.PI/2;
+  const j6=new THREE.Group();j6.position.y=-0.1;j5.add(j6);cyl(0.06,0.06,steel,0,-0.03,0,j6);box(0.2,0.1,0.12,M(0x3a3f45),0,-0.14,0,j6);
+  const fL=box(0.04,0.16,0.08,steel,-0.1,-0.28,0,j6), fR=box(0.04,0.16,0.08,steel,0.1,-0.28,0,j6);
+  const held=new THREE.Group();held.position.y=-TOOL;j6.add(held);
+  const hm={};for(const k of ['body','piston','spring','cap','assembled']){const q=OBJ[k];const grp=new THREE.Group();held.add(grp);
+    if(k==='assembled'){cyl(q.r,0.38,M(0xffffff),0,0.04-0.19-0.08,0,grp);cyl(OBJ.cap.r,0.08,M(0xE8B04A,{metalness:.8,roughness:.3}),0,0.0,0,grp)}
+    else cyl(q.r,q.h,k==='spring'?steel:k==='cap'?M(0xE8B04A,{metalness:.8,roughness:.3}):M(0xffffff),0,0.04-q.h/2,0,grp);
+    grp.visible=false;hm[k]=grp}
+  ROB={g,base,j1,j2,j3,j5,j6,fL,fR,hm,fix,mags,q:{J1:0,J2:0,J3:0,J5:0,J6:0},tcp:[0,0,0],grip:0,held:null};
+  o.robot=true;
+}
+// analytic IK: tool vertical, tip at P (station-local). Returns joint values used by the scene graph.
+function ik(P){const dx=P[0]-RB[0],dz=P[2]-RB[2];const t1=Math.atan2(-dx,-dz);
+  const u=Math.hypot(dx,dz),v=P[1]+TOOL-SH;let D=(u*u+v*v-L1*L1-L2*L2)/(2*L1*L2);D=Math.max(-1,Math.min(1,D));
+  const q=Math.acos(D);const a1=Math.atan2(v,u)+Math.atan2(L2*Math.sin(q),L1+L2*Math.cos(q));const a2=a1-q;return{t1,a1,a2}}
+// robot program for one assembly: keyframes with the TCP target, duration, program line and cell state after the line
+function robotProgram(col){
+  const pis=col==='black'?'silver':'black';const K=[];const st={grip:0,held:null,fix:0,pal:1,roll:0,need:null};
+  const tip=(P,obj,bottom)=>[P[0],(bottom??P[1])+OBJ[obj].h-0.04,P[2]];
+  const up=(Q,h=0.3)=>[Q[0],Q[1]+h,Q[2]];
+  const add=(pos,d,txt,ch={})=>{st.need=null;Object.assign(st,ch);K.push({pos,d,txt,grip:st.grip,held:st.held,fix:st.fix,pal:st.pal,roll:st.roll,need:st.need,consume:ch.consume})};
+  const HOME=[0.1,1.9,0.05];
+  const palB=tip(CELL.PAL,'body'), fixB=tip(CELL.FIX,'body'), pisP=tip(CELL.PIS[pis],'piston'), pisI=tip(CELL.FIX,'piston',1.08),
+        sprP=tip(CELL.SPR,'spring'), sprI=tip(CELL.FIX,'spring',1.24), capP=tip(CELL.CAP,'cap'), capI=tip(CELL.FIX,'cap',1.38),
+        fixA=tip(CELL.FIX,'assembled'), palA=tip(CELL.PAL,'assembled');
+  add(HOME,0.5,'MOV PHOME');
+  add(up(palB),1.1,"MOV PPAL,-50          ' above pallet");add(palB,0.5,'MVS PPAL');add(palB,0.35,'HCLOSE 1             \' grip body',{grip:1,held:'body',pal:0});add(up(palB),0.45,'MVS PPAL,-50');
+  add(up(fixB),1.0,'MOV PFIX,-50');add(fixB,0.45,'MVS PFIX');add(fixB,0.3,"HOPEN 1               ' body in fixture",{grip:0,held:null,fix:1});add(up(fixB),0.4,'MVS PFIX,-50');
+  add(up(pisP),0.9,`MOV PPIS_${pis[0].toUpperCase()},-50      ' ${pis} piston`);add(pisP,0.4,'WAIT M_IN(10)=1        \' piston ready',{need:pis});add(pisP,0.3,'HCLOSE 1',{grip:1,held:'piston',consume:pis});add(up(pisP),0.4,`MVS PPIS_${pis[0].toUpperCase()},-50`);
+  add(up(pisI),0.85,'MOV PFIX,-50');add(pisI,0.5,"MVS PINS_P            ' insert piston");add(pisI,0.3,'HOPEN 1',{grip:0,held:null,fix:2});add(up(pisI),0.4,'MVS PFIX,-50');
+  add(up(sprP),1.0,'MOV PSPR,-50');add(sprP,0.4,"WAIT M_IN(11)=1        ' spring ready",{need:'spring'});add(sprP,0.3,'HCLOSE 1',{grip:1,held:'spring',consume:'spring'});add(up(sprP),0.4,'MVS PSPR,-50');
+  add(up(sprI),0.9,'MOV PFIX,-50');add(sprI,0.45,"MVS PINS_S            ' insert spring");add(sprI,0.3,'HOPEN 1',{grip:0,held:null,fix:3});add(up(sprI),0.4,'MVS PFIX,-50');
+  add(up(capP),1.0,'MOV PCAP,-50');add(capP,0.4,"WAIT M_IN(12)=1        ' cap separated",{need:'cap'});add(capP,0.3,'HCLOSE 1',{grip:1,held:'cap',consume:'cap'});add(up(capP),0.4,'MVS PCAP,-50');
+  add(up(capI),0.9,'MOV PFIX,-50');add(capI,0.45,'MVS PINS_C');add(capI,0.8,"MOV P_CURR*(0,0,0,0,0,90) ' screw cap",{roll:Math.PI/2});add(capI,0.3,'HOPEN 1',{grip:0,held:null,fix:4});add(up(capI),0.4,'MVS PFIX,-50',{roll:0});
+  add(fixA,0.5,"MVS PFIX_A            ' grip cylinder");add(fixA,0.3,'HCLOSE 1',{grip:1,held:'assembled',fix:0});add(up(fixA),0.45,'MVS PFIX,-50');
+  add(up(palA),1.1,'MOV PPAL,-50');add(palA,0.5,'MVS PPAL_A');add(palA,0.3,"HOPEN 1               ' back on pallet",{grip:0,held:null,pal:2});add(up(palA),0.45,'MVS PPAL,-50');
+  add(HOME,0.9,'MOV PHOME');
+  let T=0;K.forEach(k=>{k.t0=T;T+=k.d;k.t1=T});K.T=T;K.pis=pis;return K}
+const ease=x=>x<0.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
+function magOK(k){if(k==='cap'&&F.assy_cap)return false;if(k==='spring'&&F.assy_spring)return false;return MAG[k]>0}
+// advance the robot program; returns false while the program is blocked waiting for an input
+function robotAdvance(st,dt){
+  const K=st.prog;const scale=K.T/cycle(st);const tau=st.t*scale;
+  const i=K.findIndex(k=>tau<k.t1);const k=K[i<0?K.length-1:i];
+  if(k.need&&!magOK(k.need)){st.blocked=k.need;st.t=k.t0/scale;return false}
+  if(st.blocked){log(`Robot: ${st.blocked} ready, program continues`,'i');st.blocked=null}
+  for(const kk of K){if(kk.consume&&!st.used[kk.consume]&&tau>=kk.t0){MAG[kk.consume]=Math.max(0,MAG[kk.consume]-1);st.used[kk.consume]=1}}
+  return true}
+function robotPose(st){ // pose + cell state at the current program time
+  if(!ROB)return;const busy=st.busy&&st.prog;const K=busy?st.prog:null;
+  let pos=[0.1,1.9,0.05],roll=0,grip=0,held=null,fix=0,line=-1,pal=null;
+  if(K){const tau=st.t*K.T/cycle(st);let i=K.findIndex(k=>tau<k.t1);if(i<0)i=K.length-1;const k=K[i],prev=K[i-1]||K[0];
+    const f=ease(Math.min(1,Math.max(0,(tau-k.t0)/k.d)));
+    pos=prev.pos.map((a,j)=>a+(k.pos[j]-a)*f);roll=prev.roll+(k.roll-prev.roll)*f;
+    const done=f>=0.999?k:prev;grip=done.grip;held=done.held;fix=done.fix;pal=done.pal;line=i;}
+  const s=ik(pos);ROB.j1.rotation.y=s.t1;ROB.j2.rotation.x=s.a1-Math.PI/2;ROB.j3.rotation.x=s.a2-s.a1+Math.PI/2;ROB.j5.rotation.x=-s.a2;ROB.j6.rotation.y=roll;
+  const w=held?OBJ[held].r+0.03:0.24;ROB.fL.position.x=-w;ROB.fR.position.x=w;
+  for(const k in ROB.hm)ROB.hm[k].visible=held===k;
+  if(held&&ROB.hm[held]){const c=st.cellCol||'red';ROB.hm[held].children.forEach((m,n)=>{if(held==='body'||(held==='assembled'&&n===0)){m.material.color.setHex(COL[c]);m.material.metalness=c==='silver'?.85:.1}else if(held==='piston'){m.material.color.setHex(K&&K.pis==='silver'?0xC9CED6:0x1b1b1d);m.material.metalness=K&&K.pis==='silver'?.85:.1}})}
+  const fb=ROB.fix;fb.body.visible=fix>=1;fb.piston.visible=fix>=2;fb.spring.visible=fix>=3;fb.cap.visible=fix>=4;
+  if(fix>=1){fb.body.material.color.setHex(COL[st.cellCol||'red']);fb.body.material.metalness=st.cellCol==='silver'?.85:.1}
+  if(K){fb.piston.material.color.setHex(K.pis==='silver'?0xC9CED6:0x1b1b1d);fb.piston.material.metalness=K.pis==='silver'?.85:.1}
+  for(const k of ['silver','black','spring','cap']){const m=ROB.mags[k];const fr=Math.max(0.02,MAG[k]/MAGMAX[k]);m.fill.scale.y=fr;m.fill.position.y=m.y0+m.h*fr/2;m.fill.visible=MAG[k]>0}
+  ROB.mags.sep.material.color.setHex(F.assy_cap?0xd00000:0x1F5FD1);
+  const a1=s.a1,a2=s.a2;ROB.q={J1:-s.t1*180/Math.PI,J2:90-a1*180/Math.PI,J3:(a1-a2)*180/Math.PI-90,J4:0,J5:(a2*180/Math.PI)+90-((a1-a2)*180/Math.PI)+(90-a1*180/Math.PI)-90,J6:roll*180/Math.PI};
+  ROB.q.J5=-(ROB.q.J2+ROB.q.J3);
+  ROB.tcp=[(pos[0]-RB[0])*UNIT_MM,-(pos[2]-RB[2])*UNIT_MM,(pos[1]-RB[1])*UNIT_MM];ROB.grip=grip;ROB.held=held;ROB.line=line;ROB.pal=pal;
+}
 // stations (layout follows the Lab 5 photo: narrow loop, robot front-right, AS/RS rear-right, MPS stations on the left)
 const stObj=[];const white=M(0xF1F1EF,{roughness:.45});
 ST.forEach(s=>{const p=at(s.s);const nx=-Math.sin(p.h),nz=Math.cos(p.h);
@@ -231,16 +360,7 @@ ST.forEach(s=>{const p=at(s.s);const nx=-Math.sin(p.h),nz=Math.cos(p.h);
  else if(s.k==='proc'){o.turn=new THREE.Group();o.turn.position.set(0,0.95,-0.1);g.add(o.turn);cyl(0.5,0.05,alu,0,0,0,o.turn);for(let k=0;k<6;k++){const a=k*Math.PI/3;box(0.25,0.05,0.18,alu,Math.cos(a)*0.55,0,Math.sin(a)*0.55,o.turn).rotation.y=-a;cyl(0.07,0.12,M(0x1F5FD1),Math.cos(a)*0.55,0.08,Math.sin(a)*0.55,o.turn)}
    box(0.08,1.2,0.08,alu,0.55,1.5,0.35,g);box(0.08,0.08,0.5,alu,0.55,2.1,0.12,g);o.head=cyl(0.08,0.4,M(0x666b70,{metalness:.8}),0.55,1.8,-0.1,g);o.hy=1.8;
    [-0.25,0.25].forEach(z=>box(0.08,1.6,0.08,alu,-0.95,1.7,z,g));box(0.08,0.12,0.6,alu,-0.95,2.5,0,g);box(0.08,0.08,1.6,alu,-0.95,2.4,-0.75,g);box(0.12,0.5,0.12,blue,-0.95,2.05,-1.3,g)}
- else if(s.k==='assy'){ // Mitsubishi RV-type 6-axis arm, white
-   cyl(0.07,0.6,blue,0.6,1.2,0.35,g);cyl(0.07,0.6,blue,0.75,1.2,0.35,g);box(0.3,0.3,0.25,M(0x9aa0a6),-0.55,1.05,0.35,g);
-   const b=new THREE.Group();b.position.set(0,0.9,0.15);g.add(b);cyl(0.24,0.3,white,0,0.15,0,b);
-   const tur=new THREE.Group();tur.position.y=0.32;b.add(tur);cyl(0.2,0.25,white,0,0.12,0,tur);
-   const l1=new THREE.Group();l1.position.y=0.3;tur.add(l1);box(0.2,0.75,0.24,white,0,0.37,0,l1);
-   const l2=new THREE.Group();l2.position.y=0.72;l1.add(l2);box(0.18,0.18,0.62,white,0,0,-0.28,l2);
-   const wr=new THREE.Group();wr.position.z=-0.6;l2.add(wr);cyl(0.06,0.2,M(0xdddddd),0,-0.1,0,wr);box(0.12,0.08,0.06,M(0x333333),0,-0.22,0,wr);
-   o.base=tur;o.l1=l1;o.l2=l2;o.wr=wr;
-   box(W,0.85,1.2,grey,0,0.425,1.3,g);box(W+0.05,0.06,1.25,alu,0,0.88,1.3,g);box(0.7,0.45,0.5,M(0x3a3f45),-0.45,0.35,1.75,g);box(0.18,0.18,0.04,M(0xd00000),-0.45,0.45,2.01,g);
-   const ch=box(0.3,0.04,0.8,alu,-0.7,1.05,0.3,g);ch.rotation.x=0.2;cyl(0.09,0.5,blue,0.55,1.15,1.3,g)}
+ else if(s.k==='assy'){ buildRobotCell(g,o,W) }
  else if(s.k==='asrs'){ // high-bay rack with XZ gantry on top
    const rk=new THREE.Group();rk.position.set(0,0,0.45);g.add(rk);o.cells=[];
    [-1.85,0,1.85].forEach(x=>[0,0.6].forEach(z=>box(0.07,3.3,0.07,alu,x,1.65,z,rk)));
@@ -320,11 +440,14 @@ function step(dt){
     st.state=F.sort_jam?'down':st.busy?'working':'idle';continue}
   const p=st.pal;
   if(p&&st.k==='asrs'&&p.part&&p.part.o.dest==='stock'&&SIM.stock.length>=CAP&&!F.asrs_full){p.part.o.dest='ship';log(`AS/RS full: order #${p.part.o.id} sent to shipping`,'i')}
-  if(p){ if(!st.busy){ if(needs(st,p)&&canStart(st,p)){st.busy=1;st.t=0} else if(!needs(st,p)){release(st,p);continue} }
-    if(st.busy){st.t+=dt;st.work+=dt;if(st.t>=cycle(st)){finish(st,p);st.busy=0;release(st,p)}}}
+  if(p){ if(!st.busy){ if(needs(st,p)&&canStart(st,p)){st.busy=1;st.t=0;if(st.k==='assy'){st.prog=robotProgram(p.part.col);st.used={};st.cellCol=p.part.col;st.blocked=null}} else if(!needs(st,p)){release(st,p);continue} }
+    if(st.busy){ if(st.k==='assy'&&st.prog){st.t+=dt; if(robotAdvance(st,dt)) st.work+=dt; else st.t=Math.min(st.t,cycle(st));} else {st.t+=dt;st.work+=dt}
+      if(st.t>=cycle(st)){finish(st,p);st.busy=0;st.prog=null;st.blocked=null;release(st,p)}}}
   const down=(st.k==='proc'&&F.proc_down)||(st.k==='hand'&&F.hand_down)||(st.k==='dist'&&F.dist_mag);
-  st.state=st.busy?'working':down?'down':st.pal?'waiting':'idle';
+  st.state=st.busy?(st.blocked?'down':'working'):down?'down':st.pal?'waiting':'idle';
  }
+ // operator refills empty robot magazines after a short delay
+ if(SIM.autoRefill){for(const k in MAG){if(MAG[k]===0){SIM.refT[k]=(SIM.refT[k]||0)+dt;if(SIM.refT[k]>25){MAG[k]=MAGMAX[k];SIM.refT[k]=0;log(`Operator refilled the ${k==='silver'||k==='black'?k+' piston':k} magazine`,'i')}}}}
  // move pallets
  const v=1.1*(F.conv_slow?0.5:1)*dt;
  const order=[...pallets].sort((a,b)=>a.s-b.s);
@@ -343,12 +466,14 @@ function sync(){
   const pt=p.part;p.wp.visible=!!pt;if(pt){p.body.material.color.setHex(COL[pt.col]);p.body.material.metalness=pt.col==='silver'?0.85:0.1;
    p.hole.visible=['drilled','assembled'].includes(pt.stage)||(pt.stage==='nok'&&pt.o.why==='assembly failed');p.cap.visible=pt.stage==='assembled';p.nok.visible=pt.stage==='nok'}}
  const tt=SIM.t;
+ const AS=ST[3];robotPose(AS);
+ if(AS.busy&&AS.pal&&ROB&&ROB.pal!=null){const p=AS.pal;p.wp.visible=ROB.pal>0;p.cap.visible=ROB.pal===2;p.hole.visible=true}
  ST.forEach((st,i)=>{const o=stObj[i];const col={working:0x2bd36a,waiting:0xf2a33a,down:0xff2a2a,idle:0x555555}[st.state];o.lamp.material.emissive.setHex(col);o.lamp.material.color.setHex(col);
   const w=st.busy?Math.sin(tt*6):0;
   if(o.head&&st.k!=='hand')o.head.position.y=o.hy-Math.abs(w)*0.3;if(o.turn&&st.busy)o.turn.rotation.y+=0.01*SIM.speed;if(o.swing)o.swing.rotation.y=st.busy?Math.sin(tt*2)*1.4:0;
   if(st.k==='proc'&&st.busy)o.head.rotation.y+=0.5;
   if(o.car){const ph=st.busy?(Math.sin(tt*1.6)+1)/2:0;o.car.position.z=-1.45+ph*3.0;o.head.position.y=o.hy-(st.busy?Math.abs(Math.sin(tt*3.2))*0.3:0)}
-  if(o.base){o.base.rotation.y=st.busy?Math.sin(tt*1.3)*1.1:0;o.l1.rotation.x=st.busy?-0.25+Math.sin(tt*2.1)*0.3:-0.15;o.l2.rotation.x=st.busy?0.25+Math.sin(tt*2.7)*0.25:0.35;o.wr.rotation.y+=st.busy?0.05:0}
+  if(false&&o.base){o.base.rotation.y=st.busy?Math.sin(tt*1.3)*1.1:0;o.l1.rotation.x=st.busy?-0.25+Math.sin(tt*2.1)*0.3:-0.15;o.l2.rotation.x=st.busy?0.25+Math.sin(tt*2.7)*0.25:0.35;o.wr.rotation.y+=st.busy?0.05:0}
   if(o.shuttle){o.shuttle.position.x=st.busy?Math.sin(tt*1.1)*1.5:0;o.shuttle.position.y=st.busy?-0.6+Math.sin(tt*0.8)*0.6:0}
   if(o.cells)o.cells.forEach((c,j)=>{const col=SIM.stock[j];c.visible=!!col;if(col){c.material.color.setHex(COL[col]);c.material.metalness=col==='silver'?.85:.1}});
   if(o.mag)o.mag.material.opacity=F.dist_mag?0.15:0.6;
@@ -358,6 +483,7 @@ function sync(){
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='p-'+b.dataset.t))});
 $('oAdd').onclick=()=>addOrder($('oCol').value,$('oDest').value,Math.max(1,Math.min(20,+$('oQty').value||1)));
 $('oPick').onclick=()=>{const c=$('oCol').value;if(!SIM.stock.includes(c))return log(`No ${c} part in stock`,'e');addPick(c)};
+$('camRob').onclick=focusRobot;$('refill').onclick=()=>{for(const k in MAG)MAG[k]=MAGMAX[k];log('Robot magazines refilled','i')};$('autoRefill').onchange=e=>SIM.autoRefill=e.target.checked;
 $('autoOrd').onchange=e=>SIM.autoOrd=e.target.checked;
 $('bRun').onclick=()=>{SIM.run=!SIM.run;$('bRun').textContent=SIM.run?'Pause':'Run'};
 document.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>{SIM.speed=+b.dataset.sp;document.querySelectorAll('[data-sp]').forEach(x=>x.classList.toggle('on',x===b))});
@@ -374,7 +500,7 @@ $('qGive').onclick=()=>{$('qRes').textContent='It was: '+FAULTS.find(f=>f.id===m
 function endM(clear){if(clear)F[mystery]=false;mystery=null;document.querySelectorAll('[data-f]').forEach(c=>{c.disabled=false;c.checked=!!F[c.dataset.f]});$('qGive').disabled=true}
 function log(t,c=''){const el=$('log');const d=document.createElement('div');d.className=c;d.textContent=`${fmt(SIM.t)}  ${t}`;el.prepend(d);while(el.childNodes.length>150)el.lastChild.remove()}
 const fmt=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;
-function ui(){
+function ui(){robotUI();
  $('pClock').textContent=fmt(SIM.t);const wip=pallets.filter(p=>p.part).length+SIM.sortQ.length;$('pWip').textContent='WIP '+wip;
  $('pRun').textContent=SIM.run?'RUNNING':'PAUSED';$('pRun').style.color=SIM.run?'var(--ok)':'var(--gold)';
  const os=SIM.orders.filter(o=>o.st!=='done'&&o.st!=='rejected').slice(0,12).concat(SIM.orders.filter(o=>o.st==='done'||o.st==='rejected').slice(-4).reverse());
@@ -388,12 +514,32 @@ function ui(){
  $('bnNote').innerHTML=mx>0.3?`<b>Bottleneck: ${ST[bi].n}</b> (${(mx*100).toFixed(0)}% busy). Line output is limited to about ${Math.round(3600/cycle(ST[bi]))} parts per hour by its ${cycle(ST[bi]).toFixed(1)} s cycle.`:'The station with the highest utilisation is the bottleneck.';
  $('chutes').innerHTML=['red','silver','black','reject'].map(k=>`<div class="stat"><b>${SIM.chute[k]}</b><span>${k}</span></div>`).join('');
 }
+let rLine=-2;
+function robotUI(){const st=ST[3];if(!ROB)return;const K=st.prog;
+ const lbl=st.busy?(st.blocked?'blocked':'running'):st.pal?'waiting':'idle';$('rState').textContent=lbl;$('rState').className='tag '+(lbl==='running'?'work':lbl==='blocked'?'down':lbl==='waiting'?'wait':'');
+ let step='Waiting for a drilled body';if(K){const i=ROB.line;const ph=i<5?'1 · Body to fixture':i<9?'1 · Body to fixture':i<17?'2 · Insert piston':i<25?'3 · Insert spring':i<34?'4 · Place and screw cap':i<41?'5 · Cylinder back to pallet':'Home';
+   step=(st.blocked?`Stopped at line ${(ROB.line+1)*10}: waiting for ${st.blocked==='silver'||st.blocked==='black'?st.blocked+' piston':st.blocked}. `:'')+ph+` · ${st.cellCol} body, ${K.pis} piston`}
+ $('rStep').textContent=step;const fr=K?Math.min(1,st.t/cycle(st)):0;$('rProg').style.width=(fr*100).toFixed(0)+'%';$('rProgT').textContent=K?`${(st.t).toFixed(1)} / ${cycle(st).toFixed(1)} s`:'';
+ const prog=K||robotProgram('red');
+ if(rLine!==ROB.line||!$('tp').childNodes.length||$('tp').dataset.k!==String(!!K)+(K?K.pis:'')){
+   $('tp').dataset.k=String(!!K)+(K?K.pis:'');
+   $('tp').innerHTML=prog.map((k,i)=>`<div${i===ROB.line?' class="cur"':''}>${String((i+1)*10).padStart(3,' ')} ${k.txt.replace(/</g,'&lt;')}</div>`).join('')+`<div>${String((prog.length+1)*10).padStart(3,' ')} END</div>`;
+   const c=$('tp').querySelector('.cur');if(c)c.scrollIntoView({block:'nearest'});rLine=ROB.line}
+ const lim={J1:[-240,240],J2:[-120,120],J3:[0,160],J4:[-200,200],J5:[-120,120],J6:[-360,360]};
+ $('jt').innerHTML=Object.entries(ROB.q).map(([k,v])=>{const [a,b]=lim[k];const x=(Math.max(a,Math.min(b,v))-a)/(b-a)*100;return `<tr><td>${k}</td><td style="text-align:right;width:70px">${v.toFixed(1)}°</td><td style="width:50%"><div class="jb"><i style="left:${Math.min(x,50)}%;width:${Math.abs(x-50)}%"></i></div></td></tr>`}).join('')+
+   `<tr><td>TCP</td><td colspan="2">X ${ROB.tcp[0].toFixed(0)}  Y ${ROB.tcp[1].toFixed(0)}  Z ${ROB.tcp[2].toFixed(0)} mm (approx.)</td></tr>`;
+ $('rGrip').textContent=ROB.grip?'closed':'open';$('rHeld').textContent=ROB.held||'—';
+ const nm={silver:'Piston · silver',black:'Piston · black',spring:'Spring',cap:'Cap'};
+ $('mags').innerHTML=Object.keys(nm).map(k=>{const bad=(k==='cap'&&F.assy_cap)||(k==='spring'&&F.assy_spring);return `<div class="row" style="justify-content:space-between;margin-top:6px;font-size:12px"><span>${nm[k]}${bad&&!mystery?' <span class="tag down">fault</span>':''}</span><span class="mono">${MAG[k]}/${MAGMAX[k]}</span></div><div class="bar ${MAG[k]===0?'bn':''}"><i style="width:${MAG[k]/MAGMAX[k]*100}%"></i></div>`}).join('')}
+function focusRobot(){const o=stObj[3];const w=new THREE.Vector3();o.g.getWorldPosition(w);camTween={t:0,from:[cam.position.clone(),ctl.target.clone()],to:[new THREE.Vector3(w.x+3.2,w.y+3.0,w.z+2.6),new THREE.Vector3(w.x-0.2,1.3,w.z)]}}
+let camTween=null;
 function resize(){const r=view.getBoundingClientRect();R3.setSize(r.width,r.height);cam.aspect=r.width/r.height;cam.updateProjectionMatrix()}
 addEventListener('resize',resize);resize();
 let last=performance.now(),uiT=0;
 function frame(now){const dt=Math.min(0.05,(now-last)/1000);last=now;
  if(SIM.run){const n=SIM.speed;for(let i=0;i<n;i++)step(dt)}
  sync();uiT+=dt;if(uiT>0.25){uiT=0;ui()}
+ if(camTween){camTween.t=Math.min(1,camTween.t+dt*1.2);const e=ease(camTween.t);cam.position.lerpVectors(camTween.from[0],camTween.to[0],e);ctl.target.lerpVectors(camTween.from[1],camTween.to[1],e);if(camTween.t>=1)camTween=null}
  ctl.update();R3.render(scene,cam);requestAnimationFrame(frame)}
 addOrder('red','ship',2);addOrder('silver','stock',1);addOrder('black','ship',1);
 log('FMS twin started with 6 pallets','i');
