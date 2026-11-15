@@ -1,0 +1,11 @@
+{
+  "_note": "Address map for the MT AC station. These are the twin's placeholder addresses. Replace them with the station's real wiring list before going live.",
+  "plc": { "ip": "192.168.0.1", "rack": 0, "slot": 2, "port": 102 },
+  "inputs": {
+    "B1": "I124.0", "B3": "I124.1", "B2": "I124.2", "B6": "I124.3", "B4": "I124.4",
+    "S1B1": "I124.5", "S1B2": "I124.6", "B7": "I124.7",
+    "S1": "I125.0", "S2": "I125.1", "S3": "I125.2", "S4": "I125.3", "S0": "I125.4"
+  },
+  "outputs": { "Q_retract": "Q124.0", "H1": "Q124.1", "H2": "Q124.2", "H3": "Q124.3" },
+  "words": { "stw": "QW256", "hsw": "QW258", "zsw": "IW256", "hiw": "IW258" }
+}

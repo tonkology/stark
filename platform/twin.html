@@ -110,7 +110,7 @@ canvas#chart{width:100%;height:170px;background:var(--panel2);border:1px solid v
 <body>
 <header>
   <div class="brand">STARK</div>
-  <div class="sub">Digital Twin · Lab 3 · FESTO MPS MT AC transfer line</div>
+  <div class="sub">Simulation Twin · Lab 3 · FESTO MPS MT AC transfer line</div>
   <div class="sp"></div>
   <nav class="sw"><a href="/twin" class="on">MT AC</a><a href="/twin-fms">FMS</a></nav>
   <span class="pill sim" id="srcPill">Layer 1 · Simulation</span>
@@ -225,7 +225,9 @@ canvas#chart{width:100%;height:170px;background:var(--panel2);border:1px solid v
       </div>
       <div class="note"><b>STW1 047E</b> = ready (OFF1). <b>047F</b> = run forward. <b>0C7F</b> = run reverse. <b>04FE</b> = acknowledge a fault. HSW 4000 hex = 100% = 50 Hz.</div>
       <h3>Layer 2 · live link</h3>
-      <div class="note">This is not connected to the real station yet. The CPU 313C-2DP has MPI and PROFIBUS ports but no Ethernet. To mirror the real line here we need:<br>
+      <div class="row"><input id="liveUrl" value="ws://localhost:8765" style="flex:1;min-width:0;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px;font:12px 'JetBrains Mono',monospace"><button class="b" id="liveBtn">Connect</button></div>
+      <div id="liveSt" style="font-size:12px;color:var(--mut);margin-top:6px">Not connected. The page is running its own simulation.</div>
+      <div class="note">Run <b>gateway.py</b> on a lab PC and press Connect. The twin then stops simulating and mirrors the PLC: I/O, lamps, stopper and drive words come from the station. It only reads, it never writes to the PLC.<br>Try it without a PLC: <span class="mono">python gateway.py --demo</span><br><br>For the real station: the CPU 313C-2DP has MPI and PROFIBUS ports but no Ethernet, so we need:<br>
       <b>1.</b> an MPI/PROFIBUS-to-Ethernet adapter on the CPU,<br>
       <b>2.</b> a small gateway on a lab PC that reads the same addresses listed in the I/O tab and streams them to this page.<br>
       The twin already runs on that address map, so the view stays the same when it goes live.</div>
@@ -272,7 +274,7 @@ canvas#chart{width:100%;height:170px;background:var(--panel2);border:1px solid v
 /* ============ CONSTANTS (scene units: 1 = 100 mm) ============ */
 const BELT_Y=1.15, R=0.2, H=0.25, X0=-3.55, X1=3.6;
 const SX={B1:-3.2,B3:0.77,B6:0.77,B2:0.77,B4:3.1}, STOP_X=1.0, FEED_X=-3.3, GAP=0.42, VMAX=1.0;
-const TYPES={metal:{c:0xC9CED6,m:0.9,r:0.25,ind:1,opt:1},red:{c:0xC0262D,m:0.05,r:0.5,ind:0,opt:1},black:{c:0x1b1b1d,m:0.05,r:0.6,ind:0,opt:0}};
+const TYPES={unk:{c:0x8a8f96,m:0.2,r:0.6,ind:0,opt:0},metal:{c:0xC9CED6,m:0.9,r:0.25,ind:1,opt:1},red:{c:0xC0262D,m:0.05,r:0.5,ind:0,opt:1},black:{c:0x1b1b1d,m:0.05,r:0.6,ind:0,opt:0}};
 
 /* ============ STATE ============ */
 const S={
@@ -418,10 +420,38 @@ function feed(type){
   m.castShadow=true; m.position.set(FEED_X,BELT_Y+H/2,0); scene.add(m);
   parts.push({id:++pid,type,x:FEED_X,mesh:m,t0:S.t,passed:false,drop:0});
 }
+function spawn(type,x){const t=TYPES[type];const m=new THREE.Mesh(new THREE.CylinderGeometry(R,R,H,32),M(t.c,{metalness:t.m,roughness:t.r}));m.castShadow=true;m.position.set(x,BELT_Y+H/2,0);scene.add(m);const p={id:++pid,type,x,mesh:m,t0:S.t,drop:0};parts.push(p);return p}
+function retype(p,type){p.type=type;const t=TYPES[type];p.mesh.material.color.setHex(t.c);p.mesh.material.metalness=t.m;p.mesh.material.roughness=t.r}
+/* ============ LAYER 2: LIVE MIRROR ============ */
+const LIVE={on:false,ws:null,in:{},out:{},drv:{},err:null,last:0};
+function liveConnect(url){
+  if(LIVE.ws){LIVE.ws.close();return}
+  let ws; try{ws=new WebSocket(url)}catch(e){liveStatus('Bad address');return}
+  LIVE.ws=ws; liveStatus('Connecting…');
+  ws.onopen=()=>{LIVE.on=true;[...parts].forEach(removePart);S.autoFeed=false;$('autoFeed').textContent='Auto feed: off';log('LIVE: connected to gateway '+url,'i');liveStatus('Connected')};
+  ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}LIVE.last=performance.now();LIVE.err=m.error||null;if(m.in){LIVE.in=m.in;LIVE.out=m.out||{};LIVE.drv=m.drv||{}}};
+  ws.onclose=()=>{const was=LIVE.on;LIVE.on=false;LIVE.ws=null;[...parts].forEach(removePart);S.state='NOT_READY';S.step='—';S.msg='Press RESET to home the station';S.msgErr=false;D.f=0;D.fault=null;S.stopper=1;liveStatus(was?'Disconnected':'Gateway not reachable. Is gateway.py running on this computer?');log(was?'LIVE: disconnected, back to simulation':'LIVE: gateway not reachable','e')};
+}
+function liveStatus(t){$('liveSt').textContent=t;$('liveBtn').textContent=LIVE.ws?'Disconnect':'Connect';const p=$('srcPill');p.textContent=LIVE.on?'Layer 2 · LIVE':'Layer 1 · Simulation';p.style.color=LIVE.on?'var(--ok)':'';p.style.borderColor=LIVE.on?'#4CC38A88':''}
+function liveStep(dt){
+  Object.assign(prevIN,IN); Object.assign(IN,LIVE.in); Object.assign(OUT,LIVE.out);
+  const d=LIVE.drv; D.stw=d.stw|0; D.zsw=d.zsw|0; D.hsw=d.hsw|0; let h=d.hiw|0; if(h>32767)h-=65536; D.f=h/0x4000*50; D.I=+d.i||0; D.fault=(D.zsw&8)?'drive fault':null;
+  const tgt=IN.S1B2?0:IN.S1B1?1:(OUT.Q_retract?0:1); S.stopper+=Math.sign(tgt-S.stopper)*Math.min(Math.abs(tgt-S.stopper),4*dt);
+  // shadow parts: the PLC only tells us where the sensors are, so parts are inferred from sensor edges
+  if(rise('B1')&&!at(SX.B1)) spawn('unk',SX.B1);
+  let held=partAt(SX.B3);
+  if(IN.B3&&!held){const up=parts.filter(p=>!p.drop&&p.x<SX.B3).sort((a,b)=>b.x-a.x)[0]; if(up){up.x=STOP_X-R-0.03;held=up}else held=spawn('unk',STOP_X-R-0.03)}
+  if(held&&IN.B3){held.gone=0;held.seen=(held.seen||0)+dt;const t=IN.B2?'metal':IN.B6?'red':(held.seen>0.8?'black':null);if(t&&held.type!==t&&(held.type==='unk'||t!=='black'))retype(held,t)}
+  if(held&&!IN.B3&&S.stopper>0.9){held.gone=(held.gone||0)+dt;if(held.gone>0.6)removePart(held)}
+  if(rise('B4')&&!at(SX.B4)){const dn=parts.filter(p=>!p.drop&&p.x>STOP_X&&p.x<SX.B4).sort((a,b)=>b.x-a.x)[0];if(dn)dn.x=SX.B4-R*0.8}
+  const stale=performance.now()-LIVE.last>2000;
+  S.state='LIVE';S.step='—';S.msgErr=!!LIVE.err||stale;S.msg=LIVE.err?'Gateway cannot read the PLC: '+LIVE.err:stale?'No data from the gateway':'Mirroring the real station (read-only)';
+}
 function removePart(p){scene.remove(p.mesh);p.mesh.geometry.dispose();parts=parts.filter(q=>q!==p)}
 
 /* ============ PHYSICS ============ */
 function physics(dt){
+  if(LIVE.on) return moveParts(dt,(D.f/50)*VMAX,S.stopper>0.35,Math.abs(D.f)>0.3);
   // drive model
   const target = D.fault?0 : D.dir*(S.jog?10:D.fset);
   const rate=50/Math.max(0.05,D.ramp);
@@ -446,6 +476,9 @@ function physics(dt){
   const sp = 1/0.25; // 250 ms stroke
   if(air){ if(wantRetract) S.stopper=Math.max(0,S.stopper-sp*dt); else if(!OUT.Q_retract) S.stopper=Math.min(1,S.stopper+sp*dt); }
   const blocking = S.stopper>0.35;
+  return moveParts(dt,v,blocking,run);
+}
+function moveParts(dt,v,blocking,run){
 
   // move parts (forward: front first)
   const dir=Math.sign(v);
@@ -618,6 +651,7 @@ document.querySelectorAll('[data-feed]').forEach(b=>b.onclick=()=>feed(b.dataset
 $('autoFeed').onclick=()=>{S.autoFeed=!S.autoFeed;$('autoFeed').textContent='Auto feed: '+(S.autoFeed?'on':'off');S.feedT=0};
 $('fset').oninput=e=>{D.fset=+e.target.value;$('fsetV').textContent=D.fset+' Hz'};
 $('ramp').oninput=e=>{D.ramp=+e.target.value;$('rampV').textContent=D.ramp.toFixed(1)+' s'};
+$('liveBtn').onclick=()=>liveConnect($('liveUrl').value.trim());$('srcPill').style.cursor='pointer';$('srcPill').onclick=()=>document.querySelector('[data-t=drv]').click();
 $('viewBtn').onclick=()=>{eng=!eng;engG.visible=eng;$('viewBtn').textContent='Engineer view: '+(eng?'on':'off')};
 
 // fault list
@@ -668,7 +702,7 @@ function wrap(g,t,x,y,w,lh){const ws=t.split(' ');let l='';for(const s of ws){co
 
 function updateUI(){
   const st=S.state; $('stPill').textContent=st+(st==='AUTO'?' · '+S.step:'');
-  $('stPill').style.color = st==='AUTO'?'var(--ok)':(st==='FAULT'||st==='ESTOP')?'var(--bad)':'var(--gold)';
+  $('stPill').style.color = st==='AUTO'||st==='LIVE'?'var(--ok)':(st==='FAULT'||st==='ESTOP')?'var(--bad)':'var(--gold)';
   $('hzPill').textContent=D.f.toFixed(1)+' Hz';
   $('hMode').textContent=st+(S.key==='man'?' (key MAN)':''); $('hStep').textContent=S.step;
   $('hBelt').textContent=D.f.toFixed(1)+' Hz · '+(Math.abs(D.f)<0.3?'stop':D.f>0?'forward':'reverse');
@@ -729,7 +763,7 @@ let last=performance.now(), uiT=0, hmiT=0, vlT=0;
 function frame(now){
   const dt=Math.min(0.05,(now-last)/1000); last=now; S.t+=dt;
   if(btnTimer>0){btnTimer-=dt; if(btnTimer<=0) btnHeld=null}
-  readInputs(); plc(dt); automation(dt);
+  if(LIVE.on) liveStep(dt); else { readInputs(); plc(dt); automation(dt); }
   const {v,run}=physics(dt);
   if(S.state==='AUTO'||S.state==='FAULT'){S.upT+=dt; if(S.state==='AUTO')S.runT+=dt}
   hist.push({t:S.t,f:D.f,I:D.I,flt:S.state==='FAULT'}); while(hist.length&&hist[0].t<S.t-40)hist.shift();
