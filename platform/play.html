@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>STARK · شغّل المصنع</title>
+<link rel="icon" href="/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FFF6E9;--card:#FFFFFF;--ink:#2A1416;--mut:#7A6560;--line:#EAD9C4;--red:#A50F1A;--red2:#7A0C14;--gold:#E8B04A;--gold2:#F6D58C;--ok:#1E9E62;--bad:#D23B41;--blue:#2D6FD8;color-scheme:light}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:17px/1.6 Alexandria,Tahoma,sans-serif;min-height:100vh}
+header{display:flex;align-items:center;gap:12px;padding:10px max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left));background:var(--red2);color:#fff}
+.brand{font-weight:800;letter-spacing:.08em;color:var(--gold);direction:ltr}
+.sp{flex:1}
+.lang{background:none;border:2px solid #ffffff66;color:#fff;border-radius:99px;padding:4px 14px;font:600 14px Alexandria;cursor:pointer}
+.stars{font-weight:800;color:var(--gold);direction:ltr}
+main{max-width:820px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-right)) 60px max(16px,env(safe-area-inset-left))}
+h1{font-weight:800;font-size:clamp(28px,6vw,44px);line-height:1.25;margin:8px 0}h1 em{font-style:normal;color:var(--red)}
+h2{font-weight:800;font-size:24px;margin:0 0 4px}
+.card{background:var(--card);border:2px solid var(--line);border-radius:22px;padding:18px;margin-top:14px;box-shadow:0 6px 0 var(--line)}
+.btn{background:var(--red);color:#fff;border:0;border-radius:16px;padding:14px 22px;font:800 18px Alexandria;cursor:pointer;box-shadow:0 5px 0 var(--red2)}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--red2)}
+.btn.g{background:var(--ok);box-shadow:0 5px 0 #14724a}.btn.y{background:var(--gold);color:#3a2206;box-shadow:0 5px 0 #b98322}
+.btn.w{background:#fff;color:var(--ink);border:2px solid var(--line);box-shadow:0 5px 0 var(--line)}
+.btn.sm{padding:10px 14px;font-size:15px;border-radius:13px}
+.btn:disabled{opacity:.45}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.lv{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}@media(max-width:640px){.lv{grid-template-columns:1fr}}
+.lv .card{margin:0;text-align:center}.lv .off{opacity:.55}
+.tag{display:inline-block;background:var(--gold2);color:#5a3a06;border-radius:99px;padding:2px 12px;font-weight:600;font-size:13px}
+.bot{display:flex;gap:12px;align-items:flex-start;margin-top:14px}
+.bot svg{width:74px;flex:none}
+.say{position:relative;flex:1;background:#fff;border:2px solid var(--line);border-radius:18px;padding:12px 16px;min-height:60px}
+.say.ok{border-color:var(--ok);background:#EAF8F1}.say.no{border-color:var(--bad);background:#FDECEC}
+.stage{background:#FDEFD8;border:2px solid var(--line);border-radius:22px;overflow:hidden;margin-top:14px}
+svg{display:block;width:100%;height:auto;touch-action:manipulation}
+.hot{cursor:pointer}
+.dots{display:flex;gap:8px;margin-top:10px}.dots i{flex:1;height:10px;border-radius:5px;background:var(--line)}.dots i.d{background:var(--ok)}.dots i.c{background:var(--gold)}
+.sw{min-width:120px;text-align:center;background:#fff;border:3px solid var(--line);border-radius:16px;padding:12px;font-weight:800;cursor:pointer;user-select:none}
+.sw.on{background:var(--gold2);border-color:var(--gold)}
+.gate.sel{outline:4px solid var(--blue);outline-offset:2px}
+.prog{display:flex;flex-wrap:wrap;gap:8px;min-height:52px;padding:10px;background:#FDEFD8;border:2px dashed var(--line);border-radius:16px;margin-top:10px}
+.chip{background:#fff;border:2px solid var(--line);border-radius:12px;padding:6px 12px;font-weight:600;font-size:15px}.chip.cur{background:var(--gold);border-color:var(--gold)}
+.big{font-size:54px;letter-spacing:6px;color:var(--gold);direction:ltr;text-align:center;margin:6px 0}
+.mut{color:var(--mut)}
+</style>
+</head>
+<body>
+<header><span class="brand">STARK</span><span id="hT"></span><span class="sp"></span><span class="stars" id="hS"></span><button class="lang" id="lg">English</button></header>
+<main id="app"></main>
+<script>
+"use strict";
+const $=id=>document.getElementById(id),app=$('app');
+const T={ar:{
+ title:'شغّل المصنع',h1:'المصنع واقف!<br><em>تقدر تشغّله؟</em>',lead:'ثلاث غرف، في كل غرفة لغز هندسي صغير. ما تحتاج تعرف أي شي من قبل، بس ركّز وجرّب.',
+ pick:'اختر مستواك',l1:'المستكشف',l1a:'٩ إلى ١٣ سنة',l1d:'٣ غرف · بدون وقت',l2:'الباني',l2a:'١٤ إلى ١٨ سنة',l3:'المهندس',l3a:'جامعة ومحترفين',soon:'قريباً',go:'يلا نبدأ',
+ room:'الغرفة',of:'من',next:'الغرفة اللي بعدها',again:'العب مرة ثانية',hi:'أهلاً! أنا روبو. المصنع وقف وأحتاج مساعدتك.',
+ r1t:'وين المشكلة؟',r1b:'المصنع ما يشتغل إلا إذا: <b>الفيشة موصّلة</b>، و<b>الزر الأحمر مرفوع</b>، و<b>الباب مقفول</b>، و<b>السير فاضي</b>. اضغط على كل شي غلط عشان تصلحه، وبعدين اضغط الزر الأخضر.',
+ r1ok:'صلّحتها!',r1fine:'هذا سليم ما فيه شي. دوّر على شي ثاني.',r1no:'لسا ما اشتغل. فيه شي ثاني غلط، شوف القائمة مرة ثانية.',r1me:'أنا تمام! المشكلة في مكان ثاني.',start:'تشغيل',
+ plug:'الفيشة',door:'الباب',stop:'زر الإيقاف',
+ r2t:'ولّع اللمبة',r2b:'كل دائرة لها قاعدة. اضغط الأزرار وجرّب، واختر القطعة اللي تخلّي اللمبة تمشي على القاعدة.',
+ q1:'اللمبة تولّع <b>بس</b> لما الزرّين مضغوطين مع بعض.',q2:'اللمبة تولّع لما <b>أي زر</b> من الاثنين ينضغط.',q3:'اللمبة تولّع لما الباب <b>مو</b> مفتوح.',
+ and:'و',or:'أو',same:'نفسه',not:'عكس',andd:'الاثنين مع بعض',ord:'واحد يكفي',samed:'زي ما هو',notd:'يقلب الإشارة',
+ A:'زر ١',B:'زر ٢',D:'الباب مفتوح',on:'مضغوط',off:'مرفوع',yes:'نعم',nope:'لا',check:'تحقق',r2ok:'صح! هذي القطعة اسمها عند المهندسين',r2no:'مو هذي. اضغط الأزرار وشوف متى تولّع اللمبة، وقارنها بالقاعدة.',pickg:'اختر قطعة أول.',
+ r3t:'برمج الروبوت',r3b:'الروبوت يسوي بالضبط اللي تكتبه له، خطوة خطوة. خلّه ياخذ <b>الصندوق</b> ويحطه في <b>الشاحنة</b>. تذكّر: ما يقدر يمشي يمين ويسار وهو نازل.',
+ c_box:'روح للصندوق',c_truck:'روح للشاحنة',c_down:'انزل ↓',c_up:'اطلع ↑',c_grab:'امسك',c_drop:'افلت',run:'شغّل البرنامج',undo:'تراجع',clear:'امسح',empty:'البرنامج فاضي. اضغط الأوامر تحت.',
+ e_move:'آخ! الروبوت حاول يمشي وهو نازل فصدم. لازم يطلع أول.',e_grabair:'الروبوت قفل يده في الهوا. لازم ينزل أول.',e_grabno:'ما فيه صندوق هنا يمسكه.',e_dropair:'الصندوق طاح من فوق! لازم ينزل قبل ما يفلت.',e_dropno:'يده فاضية، ما في شي يفلته.',e_down:'هو نازل أصلاً.',e_up:'هو طالع أصلاً.',
+ e_end:'البرنامج خلص بس الصندوق مو في الشاحنة. وش الخطوة الناقصة؟',e_held:'الصندوق لسا في يد الروبوت. خلّه يفلته في الشاحنة.',r3ok:'الصندوق في الشاحنة!',step:'الخطوة',
+ done:'المصنع اشتغل!',doneL:'جمعت {n} من ٩ نجوم. أنت تفكر زي المهندسين: تلاحظ، تجرّب، وتصلّح.',w1:'الملاحظة',w2:'المنطق',w3:'البرمجة',
+ visit:'تبغى تشوف الروبوتات الحقيقية؟ قل لمعلمك أو أهلك عن معامل STARK في جامعة الملك عبدالعزيز.',priv:'هذي اللعبة ما تحفظ اسمك ولا أي معلومة عنك.',
+ g_and:'AND',g_or:'OR',g_not:'NOT'
+},en:{
+ title:'Start the factory',h1:'The factory stopped!<br><em>Can you start it?</em>',lead:'Three rooms, one small engineering puzzle in each. You don\'t need to know anything first. Look closely and try.',
+ pick:'Pick your level',l1:'Explorer',l1a:'Ages 9 to 13',l1d:'3 rooms · no clock',l2:'Builder',l2a:'Ages 14 to 18',l3:'Engineer',l3a:'University and professionals',soon:'Coming soon',go:'Let\'s go',
+ room:'Room',of:'of',next:'Next room',again:'Play again',hi:'Hi! I\'m Robo. The factory stopped and I need your help.',
+ r1t:'What is wrong?',r1b:'The factory only runs when: <b>the plug is in</b>, <b>the red button is up</b>, <b>the door is closed</b> and <b>the belt is empty</b>. Tap everything that is wrong to fix it, then press the green button.',
+ r1ok:'Fixed!',r1fine:'That one is fine. Look for something else.',r1no:'Still not running. Something else is wrong. Check the list again.',r1me:'I\'m fine! The problem is somewhere else.',start:'START',
+ plug:'Plug',door:'Door',stop:'Stop button',
+ r2t:'Light the lamp',r2b:'Each circuit has a rule. Press the switches to try, and choose the piece that makes the lamp follow the rule.',
+ q1:'The lamp lights <b>only</b> when both switches are pressed together.',q2:'The lamp lights when <b>either</b> switch is pressed.',q3:'The lamp lights when the door is <b>not</b> open.',
+ and:'AND',or:'OR',same:'SAME',not:'NOT',andd:'both together',ord:'one is enough',samed:'as it is',notd:'flips the signal',
+ A:'Switch 1',B:'Switch 2',D:'Door open',on:'pressed',off:'up',yes:'yes',nope:'no',check:'Check',r2ok:'Right! Engineers call this piece',r2no:'Not that one. Press the switches, watch when the lamp lights, and compare with the rule.',pickg:'Choose a piece first.',
+ r3t:'Program the robot',r3b:'The robot does exactly what you write, one step at a time. Make it take the <b>box</b> and put it in the <b>truck</b>. Remember: it cannot move sideways while it is down.',
+ c_box:'Go to box',c_truck:'Go to truck',c_down:'Down ↓',c_up:'Up ↑',c_grab:'Grab',c_drop:'Let go',run:'Run program',undo:'Undo',clear:'Clear',empty:'The program is empty. Tap the commands below.',
+ e_move:'Ouch! The robot tried to move while it was down and crashed. It has to go up first.',e_grabair:'The robot closed its hand in the air. It has to go down first.',e_grabno:'There is no box here to grab.',e_dropair:'The box fell from up high! Go down before letting go.',e_dropno:'Its hand is empty, nothing to let go.',e_down:'It is already down.',e_up:'It is already up.',
+ e_end:'The program ended but the box is not in the truck. Which step is missing?',e_held:'The box is still in the robot\'s hand. Make it let go in the truck.',r3ok:'The box is in the truck!',step:'Step',
+ done:'The factory is running!',doneL:'You collected {n} of 9 stars. You think like an engineer: you look, you try, and you fix.',w1:'Observation',w2:'Logic',w3:'Programming',
+ visit:'Want to see the real robots? Tell your teacher or family about the STARK labs at King Abdulaziz University.',priv:'This game does not save your name or anything about you.',
+ g_and:'AND',g_or:'OR',g_not:'NOT'
+}};
+let L='ar';try{L=localStorage.getItem('stark_play_lang')||'ar'}catch(e){}
+const t=k=>T[L][k]||k;
+let G={room:-1,stars:[0,0,0]},R=null,redraw=()=>{};
+function setLang(){document.documentElement.lang=L;document.documentElement.dir=L==='ar'?'rtl':'ltr';$('lg').textContent=L==='ar'?'English':'العربية';$('hT').textContent=t('title');document.title='STARK · '+t('title');hud()}
+$('lg').onclick=()=>{L=L==='ar'?'en':'ar';try{localStorage.setItem('stark_play_lang',L)}catch(e){}setLang();redraw()};
+function hud(){const n=G.stars.reduce((a,b)=>a+b,0);$('hS').textContent=G.room>=0?'★ '+n:''}
+const robo=`<svg viewBox="0 0 80 90" aria-hidden="true"><rect x="36" y="2" width="8" height="14" rx="4" fill="#A50F1A"/><circle cx="40" cy="4" r="5" fill="#E8B04A"/><rect x="10" y="16" width="60" height="48" rx="16" fill="#A50F1A"/><rect x="18" y="26" width="44" height="26" rx="10" fill="#FFF6E9"/><circle cx="31" cy="39" r="6" fill="#2A1416"/><circle cx="49" cy="39" r="6" fill="#2A1416"/><circle cx="33" cy="37" r="2" fill="#fff"/><circle cx="51" cy="37" r="2" fill="#fff"/><rect x="24" y="66" width="32" height="20" rx="8" fill="#E8B04A"/></svg>`;
+function say(x,c){const s=$('say');if(!s)return;s.className='say '+(c||'');s.innerHTML=x}
+function frame(i,title,brief,body){G.room=i;hud();
+  app.innerHTML=`<span class="tag">${t('room')} ${i+1} ${t('of')} 3</span><h2 style="margin-top:8px">${title}</h2>
+   <div class="dots">${[0,1,2].map(k=>`<i class="${k<i?'d':k===i?'c':''}"></i>`).join('')}</div>
+   <div class="bot">${robo}<div class="say" id="say">${brief}</div></div>${body}`;window.scrollTo(0,0)}
+function win(i,stars,msg){G.stars[i]=stars;hud();R.locked=true;redraw=()=>{[r1draw,r2draw,r3frame][i]();win(i,stars,msg)};say(`<b>${msg}</b> <span style="color:#E8B04A;font-size:22px;direction:ltr;display:inline-block">${'★'.repeat(stars)}${'☆'.repeat(3-stars)}</span><div style="margin-top:10px"><button class="btn g" id="nx">${i<2?t('next'):t('done')}</button></div>`,'ok');
+  $('nx').onclick=()=>[room2,room3,finish][i]();$('say').scrollIntoView({block:'center',behavior:'smooth'})}
+
+/* ---------- home ---------- */
+function home(){G={room:-1,stars:[0,0,0]};hud();redraw=home;
+  app.innerHTML=`<h1>${t('h1')}</h1><p class="mut">${t('lead')}</p>
+  <div class="bot">${robo}<div class="say">${t('hi')}</div></div>
+  <h2 style="margin-top:22px">${t('pick')}</h2>
+  <div class="lv" style="margin-top:10px">
+   <div class="card"><h2>${t('l1')}</h2><div class="tag">${t('l1a')}</div><p class="mut" style="margin:8px 0 12px">${t('l1d')}</p><button class="btn" id="go">${t('go')}</button></div>
+   <div class="card off"><h2>${t('l2')}</h2><div class="tag">${t('l2a')}</div><p class="mut" style="margin:8px 0 0">${t('soon')}</p></div>
+   <div class="card off"><h2>${t('l3')}</h2><div class="tag">${t('l3a')}</div><p class="mut" style="margin:8px 0 0">${t('soon')}</p></div>
+  </div><p class="mut" style="font-size:14px;margin-top:18px">${t('priv')}</p>`;
+  $('go').onclick=room1}
+
+/* ---------- room 1 ---------- */
+function room1(){const all=['plug','stop','door','box'];const skip=all[Math.floor(Math.random()*4)];
+  R={bad:new Set(all.filter(k=>k!==skip)),miss:0,locked:false};redraw=()=>r1draw();r1draw()}
+function r1draw(){const b=R.bad;
+  frame(0,t('r1t'),t('r1b'),`<div class="stage"><svg viewBox="0 0 800 420" id="sc">
+   <rect width="800" height="420" fill="#FDEFD8"/><rect y="330" width="800" height="90" fill="#EAD9C4"/>
+   <g class="hot" data-k="plug"><rect x="20" y="60" width="150" height="130" fill="transparent"/><rect x="40" y="80" width="56" height="70" rx="10" fill="#fff" stroke="#7A6560" stroke-width="4"/><circle cx="58" cy="108" r="5" fill="#2A1416"/><circle cx="78" cy="108" r="5" fill="#2A1416"/>
+     ${b.has('plug')?'<rect x="96" y="176" width="44" height="26" rx="8" fill="#2A1416"/><path d="M118 202 C118 260 150 300 150 330" stroke="#2A1416" stroke-width="7" fill="none"/>':'<rect x="46" y="98" width="44" height="26" rx="8" fill="#2A1416"/><path d="M68 124 C68 240 150 260 150 330" stroke="#2A1416" stroke-width="7" fill="none"/>'}
+     <text x="68" y="72" text-anchor="middle" font-size="20" font-weight="800" fill="#7A6560" font-family="Alexandria">${t('plug')}</text></g>
+   <rect x="150" y="250" width="520" height="30" rx="10" fill="#3a3a3e"/><rect x="150" y="280" width="520" height="50" fill="#fff" stroke="#EAD9C4" stroke-width="3"/>
+   <g class="hot" data-k="box"><rect x="330" y="180" width="110" height="72" fill="transparent"/>${b.has('box')?'<rect x="350" y="196" width="68" height="54" rx="6" fill="#C98A3A" stroke="#8a5a1c" stroke-width="4"/><path d="M350 222 H418 M384 196 V250" stroke="#8a5a1c" stroke-width="3"/>':''}</g>
+   <g class="hot" data-k="door"><rect x="480" y="70" width="170" height="182" fill="transparent"/><rect x="500" y="90" width="130" height="160" rx="6" fill="none" stroke="#7A6560" stroke-width="6"/>
+     ${b.has('door')?'<polygon points="500,90 545,66 545,226 500,250" fill="#9fd0ff" stroke="#2D6FD8" stroke-width="4"/>':'<rect x="506" y="96" width="118" height="148" fill="#cfe6ff"/><circle cx="612" cy="172" r="6" fill="#2D6FD8"/>'}
+     <text x="600" y="62" text-anchor="middle" font-size="20" font-weight="800" fill="#7A6560" font-family="Alexandria">${t('door')}</text></g>
+   <g class="hot" data-k="robo" transform="translate(200,150)"><rect x="0" y="0" width="90" height="100" fill="transparent"/><rect x="38" y="30" width="14" height="70" fill="#A50F1A"/><rect x="10" y="16" width="70" height="18" rx="9" fill="#A50F1A"/><circle cx="14" cy="25" r="12" fill="#E8B04A"/><rect x="2" y="36" width="8" height="22" fill="#7A6560"/><rect x="18" y="36" width="8" height="22" fill="#7A6560"/></g>
+   <g class="hot" data-k="lamp"><rect x="690" y="40" width="70" height="120" fill="transparent"/><rect x="718" y="70" width="12" height="90" fill="#7A6560"/><circle cx="724" cy="62" r="22" fill="#E8B04A" stroke="#b98322" stroke-width="4"/></g>
+   <g class="hot" data-k="stop"><rect x="520" y="282" width="130" height="46" fill="transparent"/><rect x="540" y="286" width="46" height="40" rx="8" fill="#E8B04A"/><circle cx="563" cy="${b.has('stop')?310:302}" r="${b.has('stop')?17:15}" fill="#D23B41" stroke="#7A0C14" stroke-width="3"/>${b.has('stop')?'':'<ellipse cx="563" cy="314" rx="15" ry="5" fill="#7A0C14" opacity=".5"/>'}
+     <text x="606" y="316" text-anchor="middle" font-size="28" font-weight="800" fill="${b.has('stop')?'#D23B41':'#1E9E62'}" font-family="Alexandria">${b.has('stop')?'↓':'↑'}</text></g>
+   <g class="hot" data-k="start"><circle cx="230" cy="305" r="19" fill="#1E9E62" stroke="#14724a" stroke-width="4"/><text x="${L==='ar'?300:292}" y="312" text-anchor="middle" font-size="18" font-weight="800" fill="#14724a" font-family="Alexandria">${t('start')}</text></g>
+  </svg></div>`);
+  $('sc').querySelectorAll('[data-k]').forEach(g=>g.onclick=()=>{if(R.locked)return;const k=g.dataset.k;
+    if(k==='start'){if(!R.bad.size)return win(0,R.miss===0?3:R.miss<=2?2:1,t('done'));R.miss++;return say(t('r1no'),'no')}
+    if(R.bad.has(k)){R.bad.delete(k);r1draw();say(t('r1ok'),'ok')}else{R.miss++;say(k==='robo'?t('r1me'):t('r1fine'),'no')}})}
+
+/* ---------- room 2 ---------- */
+const Q=[{q:'q1',ins:['A','B'],opts:['and','or'],ans:'and',f:{and:(a,b)=>a&&b,or:(a,b)=>a||b}},
+         {q:'q2',ins:['A','B'],opts:['and','or'],ans:'or',f:{and:(a,b)=>a&&b,or:(a,b)=>a||b}},
+         {q:'q3',ins:['D'],opts:['same','not'],ans:'not',f:{same:a=>a,not:a=>!a}}];
+function room2(){R={i:0,miss:0,sel:null,v:[0,0],locked:false};redraw=()=>r2draw();r2draw()}
+function r2draw(){const q=Q[R.i],on=R.sel?!!q.f[R.sel](!!R.v[0],!!R.v[1]):false;
+  frame(1,t('r2t'),t('r2b'),`<div class="card"><div class="tag">${R.i+1} / 3</div><p style="font-size:19px;margin:8px 0 14px">${t(q.q)}</p>
+    <div class="row" style="justify-content:center">${q.ins.map((n,k)=>`<div class="sw ${R.v[k]?'on':''}" data-i="${k}">${t(n)}<br><span class="mut" style="font-weight:400">${n==='D'?(R.v[k]?t('yes'):t('nope')):(R.v[k]?t('on'):t('off'))}</span></div>`).join('')}
+     <svg viewBox="0 0 100 120" style="width:96px"><circle cx="50" cy="46" r="34" fill="${on?'#FFD84D':'#E6DCCB'}" stroke="${on?'#E8B04A':'#B9AC98'}" stroke-width="5"/>${on?'<g stroke="#E8B04A" stroke-width="5" stroke-linecap="round"><path d="M50 2v-0M8 46h-6M98 46h-6M18 14l-4-4M82 14l4-4"/></g>':''}<rect x="38" y="80" width="24" height="26" rx="5" fill="#7A6560"/></svg></div>
+    <div class="row" style="justify-content:center;margin-top:16px">${q.opts.map(o=>`<button class="btn w gate ${R.sel===o?'sel':''}" data-o="${o}">${t(o)}<br><span class="mut" style="font:400 13px Alexandria">${t(o+'d')}</span></button>`).join('')}</div>
+    <div class="row" style="justify-content:center;margin-top:16px"><button class="btn y" id="ck">${t('check')}</button></div></div>`);
+  app.querySelectorAll('.sw').forEach(s=>s.onclick=()=>{if(R.locked)return;R.v[+s.dataset.i]^=1;r2draw()});
+  app.querySelectorAll('.gate').forEach(s=>s.onclick=()=>{if(R.locked)return;R.sel=s.dataset.o;r2draw()});
+  $('ck').onclick=()=>{if(R.locked)return;if(!R.sel)return say(t('pickg'));
+    if(R.sel!==q.ans){R.miss++;return say(t('r2no'),'no')}
+    const nm=t('g_'+(q.ans==='same'?'not':q.ans));
+    if(R.i<2){R.locked=true;say(`<b>${t('r2ok')} <span style="direction:ltr;display:inline-block">${nm}</span>.</b>`,'ok');setTimeout(()=>{R.i++;R.sel=null;R.v=[0,0];R.locked=false;r2draw()},1500)}
+    else win(1,R.miss===0?3:R.miss<=2?2:1,`${t('r2ok')} <span style="direction:ltr;display:inline-block">${nm}</span>.`)}}
+
+/* ---------- room 3 ---------- */
+const CM=['c_box','c_down','c_grab','c_up','c_truck','c_drop'];
+function room3(){R={prog:[],runs:0,locked:false,busy:false};r3init();redraw=()=>{if(!R.busy)r3frame()};r3frame()}
+const XS={home:400,box:170,truck:630};
+function r3init(){R.v={at:'home',down:false,grab:false,held:false,inTruck:false,pc:-1,ax:XS.home,ay:60}}
+function r3frame(){frame(2,t('r3t'),t('r3b'),`<div class="stage"><svg viewBox="0 0 800 300" id="rv"></svg></div>
+   <div class="card"><div class="prog" id="pg"></div>
+    <div class="row" style="margin-top:12px">${CM.map(c=>`<button class="btn w sm" data-c="${c}">${t(c)}</button>`).join('')}</div>
+    <div class="row" style="margin-top:14px"><button class="btn g" id="run">${t('run')}</button><button class="btn w sm" id="un">${t('undo')}</button><button class="btn w sm" id="cl">${t('clear')}</button></div></div>`);
+  app.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{if(R.locked||R.busy||R.prog.length>=12)return;R.prog.push(b.dataset.c);r3init();r3draw()});
+  $('un').onclick=()=>{if(R.locked||R.busy)return;R.prog.pop();r3init();r3draw()};$('cl').onclick=()=>{if(R.locked||R.busy)return;R.prog=[];r3init();r3draw()};
+  $('run').onclick=r3run;r3draw()}
+function r3draw(){const v=R.v,bx=v.held?v.ax:v.inTruck?XS.truck:XS.box,by=v.held?v.ay+62:v.inTruck?196:214;
+  $('rv').innerHTML=`<rect width="800" height="300" fill="#FDEFD8"/><rect y="250" width="800" height="50" fill="#EAD9C4"/><rect x="60" y="24" width="680" height="12" rx="6" fill="#7A6560"/>
+   <rect x="110" y="238" width="120" height="14" rx="4" fill="#fff" stroke="#EAD9C4" stroke-width="3"/>
+   <g><rect x="560" y="212" width="150" height="40" rx="6" fill="#2D6FD8"/><rect x="700" y="196" width="50" height="56" rx="8" fill="#2D6FD8"/><rect x="712" y="204" width="28" height="20" rx="4" fill="#cfe6ff"/><circle cx="596" cy="256" r="14" fill="#2A1416"/><circle cx="716" cy="256" r="14" fill="#2A1416"/></g>
+   <rect x="${bx-24}" y="${by}" width="48" height="24" rx="4" fill="#C98A3A" stroke="#8a5a1c" stroke-width="3"/>
+   <rect x="${v.ax-28}" y="16" width="56" height="28" rx="8" fill="#A50F1A"/><rect x="${v.ax-6}" y="44" width="12" height="${v.ay-14}" fill="#A50F1A"/>
+   <rect x="${v.ax-28}" y="${v.ay+28}" width="56" height="12" rx="4" fill="#E8B04A"/>
+   <rect x="${v.ax-(v.grab?26:32)}" y="${v.ay+40}" width="8" height="30" rx="3" fill="#7A6560"/><rect x="${v.ax+(v.grab?18:24)}" y="${v.ay+40}" width="8" height="30" rx="3" fill="#7A6560"/>`;
+  $('pg').innerHTML=R.prog.map((c,i)=>`<span class="chip ${i===v.pc?'cur':''}">${i+1}. ${t(c)}</span>`).join('')||`<span class="mut" style="font-size:15px">${t('empty')}</span>`}
+function r3exec(c){const v=R.v;
+  if(c==='c_box'||c==='c_truck'){if(v.down)return 'e_move';v.at=c==='c_box'?'box':'truck';return}
+  if(c==='c_down'){if(v.down)return 'e_down';v.down=true;return}
+  if(c==='c_up'){if(!v.down)return 'e_up';v.down=false;return}
+  if(c==='c_grab'){if(!v.down)return 'e_grabair';if(v.at!=='box'||v.inTruck||v.held)return 'e_grabno';v.grab=true;v.held=true;return}
+  if(c==='c_drop'){if(!v.held)return 'e_dropno';if(!v.down)return 'e_dropair';v.grab=false;v.held=false;if(v.at==='truck')v.inTruck=true;return}}
+function r3run(){if(R.locked||R.busy||!R.prog.length)return;say(t('r3b'));R.busy=true;R.runs++;r3init();let i=0;
+  const fail=k=>{R.busy=false;say((i<R.prog.length?`<b>${t('step')} ${i+1}:</b> `:'')+t(k),'no');$('say').scrollIntoView({block:'center',behavior:'smooth'})};
+  const next=()=>{const v=R.v;if(i>=R.prog.length){v.pc=-1;r3draw();R.busy=false;if(v.inTruck)return win(2,R.runs===1?3:R.runs<=3?2:1,t('r3ok'));return fail(v.held?'e_held':'e_end')}
+    v.pc=i;const e=r3exec(R.prog[i]);const tx=XS[v.at],ty=v.down?140:60,sx=v.ax,sy=v.ay,t0=performance.now();
+    const fr=n=>{const k=Math.min(1,(n-t0)/420);v.ax=sx+(tx-sx)*k;v.ay=sy+(ty-sy)*k;if(!$('rv'))return;r3draw();if(k<1)requestAnimationFrame(fr);else if(e)fail(e);else{i++;setTimeout(next,120)}};requestAnimationFrame(fr)};next()}
+
+/* ---------- finish ---------- */
+function finish(){G.room=3;hud();const n=G.stars.reduce((a,b)=>a+b,0);redraw=finish;
+  app.innerHTML=`<h1>${t('done')}</h1><div class="big">${'★'.repeat(n)}${'☆'.repeat(9-n)}</div>
+   <div class="bot">${robo}<div class="say ok">${t('doneL').replace('{n}',L==='ar'?n.toLocaleString('ar-EG'):n)}</div></div>
+   <div class="lv" style="margin-top:14px">${['w1','w2','w3'].map((w,i)=>`<div class="card"><h2>${t(w)}</h2><div style="color:#E8B04A;font-size:26px;direction:ltr">${'★'.repeat(G.stars[i])}${'☆'.repeat(3-G.stars[i])}</div></div>`).join('')}</div>
+   <div class="card"><p style="margin:0 0 12px">${t('visit')}</p><button class="btn" id="ag">${t('again')}</button></div>`;
+  $('ag').onclick=home;window.scrollTo(0,0)}
+setLang();home();
+</script>
+</body>
+</html>
