@@ -190,6 +190,15 @@ main{position:relative;z-index:2}
 .contact h2 em{font-style:normal;color:var(--gold)}
 .who{font-size:15.5px;color:var(--ash)} .who b{display:block;font-family:var(--display);font-weight:700;font-size:19px;color:var(--paper)}
 .mail{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px}
+.team{margin-top:34px;padding-top:22px;border-top:1px solid var(--line)}
+.team .mono{display:block;margin-bottom:14px}
+.crew{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;list-style:none;margin:0;padding:0}
+.crew li{background:rgba(13,6,7,.86);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:4px;padding:10px 12px;min-width:0}
+.crew b{display:block;font-weight:700;font-size:15px;color:var(--paper)}
+.crew .ar{display:block;direction:rtl;text-align:left;font-size:13px;color:var(--ash)}
+.crew small{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin-top:4px}
+.crew li.lead{grid-column:1/-1;border-color:rgba(232,176,74,.55);background:rgba(122,12,20,.42)}
+@media (max-width:520px){.crew li{padding:8px 9px}.crew b{font-size:13.5px}.crew .ar{font-size:12px}.crew small{font-size:9px;letter-spacing:.04em}}
 .mail code{font-family:var(--mono);font-size:14.5px;background:rgba(13,6,7,.6);border:1px solid var(--line);border-radius:6px;padding:10px 14px;color:var(--gold2);user-select:all;overflow-wrap:anywhere}
 footer{position:relative;z-index:2;padding:26px var(--gr) calc(30px + env(safe-area-inset-bottom,0px)) var(--gl);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--dim);background:linear-gradient(transparent,rgba(13,6,7,.92))}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
@@ -218,7 +227,7 @@ footer{position:relative;z-index:2;padding:26px var(--gr) calc(30px + env(safe-a
 </div>
 <div class="rail" id="rail">
   <a href="#boot"><span>Boot</span><i></i></a><a href="#about"><span>STARK</span><i></i></a><a href="#labs"><span>Labs</span><i></i></a>
-  <a href="#mechanism"><span>Mechanism</span><i></i></a><a href="#programs"><span>Programs</span><i></i></a><a href="#prototype"><span>Prototype</span><i></i></a><a href="#schools"><span>Schools</span><i></i></a><a href="#twin"><span>Twin</span><i></i></a><a href="#contact"><span>Contact</span><i></i></a>
+  <a href="#mechanism"><span>Mechanism</span><i></i></a><a href="#programs"><span>Programs</span><i></i></a><a href="#prototype"><span>Prototype</span><i></i></a><a href="#schools"><span>Schools</span><i></i></a><a href="#twin"><span>Twin</span><i></i></a><a href="#contact"><span>Team</span><i></i></a>
 </div>
 
 <main>
@@ -342,6 +351,20 @@ footer{position:relative;z-index:2;padding:26px var(--gr) calc(30px + env(safe-a
     <h2>Bring us a problem that <em>moves.</em></h2>
     <div class="who"><b>Dr. Mohammed Tonkal</b>Director, STARK<br>Faculty of Engineering, King Abdulaziz University, Jeddah</div>
     <div class="mail"><code id="addr">mtonkal@kau.edu.sa</code><button class="btn" id="copy" type="button">Copy email</button></div>
+    <div class="team">
+      <span class="mono">The team</span>
+      <ul class="crew">
+        <li class="lead"><b>Dr. Mohammed Tonkal</b><span class="ar">د. محمد تنكل</span><small>Director · Assistant Professor, Mechanical Engineering</small></li>
+        <li><b>Yara Gharawi</b><span class="ar">يارا غروي</span><small>Mechanical Eng. · Production &amp; Design</small></li>
+        <li><b>Areen Filimban</b><span class="ar">أرين فلمبان</span><small>Mechanical Eng. · Production &amp; Design</small></li>
+        <li><b>Waad Salih</b><span class="ar">وعد صالح</span><small>Mechanical Eng. · Production &amp; Design</small></li>
+        <li><b>Muhannad Bakhsh</b><span class="ar">مهند بخش</span><small>Mechanical Engineering</small></li>
+        <li><b>Dana Al-Eid</b><span class="ar">دانة العيد</span><small>Mechanical Engineering</small></li>
+        <li><b>Muhammad Ahsan Islahi</b><span class="ar">محمد إصلاحي</span><small>Electrical Engineering</small></li>
+        <li><b>Shuaib Sifi</b><span class="ar">شعيب سيفي</span><small>Computer Science</small></li>
+        <li><b>Al-Baraa Bahaddad</b><span class="ar">البراء باحداد</span><small>Engineering</small></li>
+      </ul>
+    </div>
   </div>
 </section>
 </main>
