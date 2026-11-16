@@ -39,6 +39,20 @@ service cloud.firestore {
       allow read, write: if isDirector();
     }
 
+    // Applications from the public "Restart the Line" test. Anyone may submit once per email
+    // (the document id is the email, and only create is allowed); only the director reads them.
+    match /applicants/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['name','email','phone','uni','major','year','prog','track','total','rooms','secs','at','ua','v'])
+                    && request.resource.data.name is string && request.resource.data.name.size() <= 80
+                    && request.resource.data.email is string && request.resource.data.email.size() <= 120
+                    && request.resource.data.uni is string && request.resource.data.uni.size() <= 80
+                    && request.resource.data.major is string && request.resource.data.major.size() <= 80
+                    && request.resource.data.total is int && request.resource.data.total >= 0 && request.resource.data.total <= 500
+                    && request.resource.data.rooms is list && request.resource.data.rooms.size() == 5
+                    && id.size() <= 120;
+      allow read, update, delete: if isDirector();
+    }
+
     // Used only by the Ask STARK relay (server side). Nobody signs in to it directly.
     match /askStarkUsage/{id} {
       allow read, write: if false;

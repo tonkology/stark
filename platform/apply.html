@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>STARK · Restart the Line</title>
+<meta name="description" content="Apply to STARK: five rooms, thirty minutes. Bring the production line back to life.">
+<link rel="icon" href="/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0E0809;--panel:#170E10;--panel2:#1F1416;--line:#3A2629;--fg:#F3E9DF;--mut:#A8968E;--red:#7A0C14;--gold:#E8B04A;--ok:#4CC38A;--bad:#E5484D;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 Inter,system-ui,sans-serif;min-height:100vh}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:10px max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left));border-bottom:1px solid var(--line);background:linear-gradient(90deg,var(--red),#3B070B 60%,var(--bg))}
+.brand{font:800 17px Unbounded,sans-serif;letter-spacing:.06em;color:var(--gold)}
+.sp{flex:1}
+.pill{font:600 12px "JetBrains Mono",monospace;padding:5px 10px;border-radius:99px;border:1px solid var(--line);background:#0008;white-space:nowrap}
+.pill.t{color:var(--gold);border-color:#E8B04A66}.pill.t.low{color:var(--bad);border-color:var(--bad)}
+main{max-width:860px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-right)) 60px max(16px,env(safe-area-inset-left))}
+h1{font:800 clamp(26px,5vw,44px)/1.08 Unbounded,sans-serif;margin:10px 0 12px}h1 em{font-style:normal;color:var(--gold)}
+h2{font:700 22px Inter;margin:0 0 6px}
+.eyebrow{font:600 11px "JetBrains Mono";letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.lead{color:var(--mut);font-size:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:600px){.grid{grid-template-columns:1fr}}
+label.f{display:block;font:600 12px Inter;color:var(--mut);margin:0 0 5px}
+input,select{width:100%;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font:15px Inter}
+input:focus,select:focus{outline:2px solid #E8B04A88;outline-offset:1px}
+.btn{background:var(--gold);color:#2A1607;border:0;border-radius:10px;padding:12px 18px;font:700 15px Inter;cursor:pointer}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sec{background:var(--panel2);color:var(--fg);border:1px solid var(--line)}
+.btn.sm{padding:8px 12px;font-size:13px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.rules{margin:10px 0 0;padding-left:20px;color:var(--mut)}.rules li{margin:4px 0}.rules b{color:var(--fg)}
+.steps{display:flex;gap:6px;margin:14px 0 0}
+.steps i{flex:1;height:6px;border-radius:3px;background:var(--line)}.steps i.done{background:var(--ok)}.steps i.cur{background:var(--gold)}.steps i.skip{background:#6b4a4d}
+.brief{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:12px 0;font-size:14px;color:#dccfc6}
+.brief b{color:var(--gold)}
+.msg{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:14px;display:none}
+.msg.show{display:block}.msg.ok{background:#123D2A;color:#a9efcc}.msg.no{background:#4A1013;color:#ffc2c4}.msg.info{background:#2a2110;color:#f5d59a}
+svg{display:block;width:100%;height:auto;touch-action:manipulation}
+.stage{background:#0c0708;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:10px}
+.hot{cursor:pointer}.hot:hover .hl{stroke:#E8B04A;stroke-width:3}
+.foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font:600 10px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);padding:6px 4px;border-bottom:1px solid var(--line)}
+td{padding:5px 4px;border-bottom:1px solid #2a1c1e}
+.bit{display:inline-block;min-width:28px;text-align:center;padding:1px 6px;border-radius:5px;font:600 12px "JetBrains Mono";background:#2a1c1e;color:#806d68}.bit.on{background:var(--gold);color:#2A1607}
+.sw{display:inline-flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer;user-select:none;font-weight:600}
+.sw.on{border-color:var(--gold);color:var(--gold)}
+.gate{display:flex;flex-direction:column;gap:4px;min-width:120px}
+.prog{display:flex;flex-wrap:wrap;gap:6px;min-height:44px;padding:8px;background:#0c0708;border:1px dashed var(--line);border-radius:10px;margin-top:8px}
+.chip{font:600 12px "JetBrains Mono";padding:6px 9px;border-radius:8px;background:var(--panel2);border:1px solid var(--line)}
+.chip.cur{background:var(--gold);color:#2A1607}
+.cmds{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+input[type=range]{padding:0;accent-color:var(--gold)}
+.res{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:14px}@media(max-width:600px){.res{grid-template-columns:repeat(2,1fr)}}
+.res div{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+.res b{display:block;font:600 22px "JetBrains Mono";color:var(--gold)}.res span{font-size:11px;color:var(--mut)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header><div class="brand">STARK</div><span class="eyebrow" style="color:#F3D9B0">Restart the Line</span><div class="sp"></div><span class="pill" id="pRoom" hidden></span><span class="pill t" id="pTime" hidden>30:00</span></header>
+<main id="app"></main>
+
+<script src="/firebase-config.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id), app=$('app');
+const LIMIT=30*60, KEY='stark_apply_v1';
+const ROOMS=[{k:'obs',n:'Observation',par:240},{k:'logic',n:'Logic',par:300},{k:'mech',n:'Mechanism',par:300},{k:'diag',n:'Diagnosis',par:360},{k:'seq',n:'Sequencing',par:360}];
+let S=null; // session
+function load(){try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+// seeded random so a reload gives the same puzzles
+function rng(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const now=()=>Date.now();
+function left(){return Math.max(0,LIMIT-Math.floor((now()-S.t0)/1000))}
+function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+let tick=null;
+function startClock(){clearInterval(tick);tick=setInterval(()=>{if(!S||S.done)return;const l=left();$('pTime').textContent=fmt(l);$('pTime').classList.toggle('low',l<180);if(l<=0){finishRoom(false,true)}},500)}
+
+/* ---------------- intro + form ---------------- */
+function intro(){
+  $('pTime').hidden=true;$('pRoom').hidden=true;
+  app.innerHTML=`<span class="eyebrow">Co-op and summer internships · STARK at KAU</span>
+  <h1>The line is down.<br><em>Restart it.</em></h1>
+  <p class="lead">This is how you apply to STARK. No CV. Five rooms, thirty minutes. Each room is a small engineering puzzle, and how you solve it tells us how you think.</p>
+  <div class="card"><h2>How it works</h2>
+   <ul class="rules">
+    <li><b>30 minutes</b> in total, on one clock. It starts when you press Start and keeps running if you close the page.</li>
+    <li><b>One attempt.</b> You cannot restart or submit twice with the same email.</li>
+    <li><b>No experience needed.</b> Everything you need is explained inside each room. Read carefully.</li>
+    <li><b>Wrong tries and hints cost points.</b> Guessing is slower than thinking.</li>
+    <li>You can <b>skip</b> a room for zero points and move on. You cannot go back.</li>
+    <li>Do it <b>alone</b>. Shortlisted candidates solve a second round in the lab, in person, so a borrowed score will not help you.</li>
+   </ul></div>
+  <div class="card"><h2>About you</h2>
+   <div class="grid" style="margin-top:10px">
+    <div><label class="f" for="f_name">Full name</label><input id="f_name" autocomplete="name" maxlength="80"></div>
+    <div><label class="f" for="f_email">Email</label><input id="f_email" type="email" autocomplete="email" maxlength="120" style="direction:ltr"></div>
+    <div><label class="f" for="f_phone">Mobile (optional)</label><input id="f_phone" type="tel" autocomplete="tel" maxlength="20" style="direction:ltr"></div>
+    <div><label class="f" for="f_uni">University or college</label><input id="f_uni" maxlength="80" placeholder="e.g. King Abdulaziz University"></div>
+    <div><label class="f" for="f_major">Major</label><input id="f_major" maxlength="80" placeholder="e.g. Mechanical Engineering"></div>
+    <div><label class="f" for="f_year">Year of study</label><select id="f_year"><option value="">Choose</option><option>2nd year</option><option>3rd year</option><option>4th year</option><option>5th year</option><option>Graduate</option><option>Other</option></select></div>
+    <div><label class="f" for="f_prog">Applying for</label><select id="f_prog"><option value="">Choose</option><option value="coop-next">Co-op, starting next semester (6 months)</option><option value="summer">Summer internship</option><option value="coop-summer">Co-op, starting in summer (6 months)</option></select></div>
+    <div><label class="f" for="f_track">Area you want to work in</label><select id="f_track"><option value="">Choose</option><option value="automation">Automation and PLCs</option><option value="robotics">Robotics software</option><option value="mechanical">Mechanical design and prototyping</option><option value="twin">Digital twin and software</option><option value="unsure">Not sure yet</option></select></div>
+   </div>
+   <label class="row" style="margin-top:14px;font-size:13px;color:var(--mut);align-items:flex-start"><input type="checkbox" id="f_ok" style="width:auto;margin-top:3px"> <span style="flex:1">I will solve this on my own, and I agree that STARK stores these details and my results to select candidates.</span></label>
+   <div class="msg no" id="f_msg"></div>
+   <div class="row" style="margin-top:14px"><button class="btn" id="go">Start the 30 minutes</button><span style="font-size:13px;color:var(--mut)">Best on a laptop. A phone works too.</span></div>
+  </div>`;
+  $('go').onclick=()=>{const v=k=>$(k).value.trim();const e=v('f_email').toLowerCase();const m=$('f_msg');
+    const bad=t=>{m.textContent=t;m.classList.add('show')};
+    if(v('f_name').length<3)return bad('Enter your full name.');
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))return bad('Enter a valid email.');
+    if(!v('f_uni')||!v('f_major')||!v('f_year')||!v('f_prog')||!v('f_track'))return bad('Fill in every field (mobile is optional).');
+    if(!$('f_ok').checked)return bad('Tick the box to continue.');
+    S={who:{name:v('f_name'),email:e,phone:v('f_phone'),uni:v('f_uni'),major:v('f_major'),year:v('f_year'),prog:v('f_prog'),track:v('f_track')},seed:(Math.random()*2**31)|0,t0:now(),room:0,res:[],done:false,sent:false};
+    save();startClock();enter()};
+}
+
+/* ---------------- room frame ---------------- */
+let R=null; // live room state
+function frame(title,brief,body){const r=ROOMS[S.room];
+  $('pTime').hidden=false;$('pRoom').hidden=false;$('pRoom').textContent=`Room ${S.room+1}/5`;
+  app.innerHTML=`<span class="eyebrow">Room ${S.room+1} of 5 · ${r.n}</span><h2 style="margin-top:6px">${title}</h2>
+   <div class="steps">${ROOMS.map((x,i)=>`<i class="${i<S.room?(S.res[i]&&S.res[i].solved?'done':'skip'):i===S.room?'cur':''}"></i>`).join('')}</div>
+   <div class="brief">${brief}</div>${body}
+   <div class="msg" id="msg"></div>
+   <div class="foot"><div class="row"><button class="btn sec sm" id="hint">Hint (−25)</button></div><button class="btn sec sm" id="skip">Skip room (0 points)</button></div>`;
+  $('skip').onclick=()=>{if(R.locked)return;if(R.skipArm){finishRoom(false)}else{R.skipArm=true;$('skip').textContent='Tap again to skip';setTimeout(()=>{if(R&&$('skip')){R.skipArm=false;$('skip').textContent='Skip room (0 points)'}},3000)}};
+  $('hint').onclick=()=>{if(R.locked||R.hinted)return;R.hinted=true;R.hints++;$('hint').disabled=true;say(R.hintText(),'info')};
+  window.scrollTo(0,0)}
+function say(t,c){const m=$('msg');if(!m)return;m.className='msg show '+(c||'info');m.innerHTML=t}
+function wrong(t){R.wrong++;say(t,'no')}
+function enter(){if(S.done)return results();if(left()<=0)return finishRoom(false,true);
+  R={t0:now(),wrong:0,hints:0,hinted:false,locked:false,rnd:rng(S.seed+S.room*7919)};
+  [roomObs,roomLogic,roomMech,roomDiag,roomSeq][S.room]()}
+function finishRoom(solved,timeup){
+  if(!S||S.done)return;if(R&&R.stop)R.stop();
+  if(R&&S.room<ROOMS.length&&!S.res[S.room]){const secs=Math.round((now()-R.t0)/1000),par=ROOMS[S.room].par;
+    let sc=0;if(solved){sc=100-R.wrong*15-R.hints*25-Math.max(0,Math.floor((secs-par)/20));sc=Math.max(10,Math.min(100,sc))}
+    S.res[S.room]={k:ROOMS[S.room].k,solved:!!solved,score:sc,secs,wrong:R.wrong,hints:R.hints}}
+  if(timeup){for(let i=0;i<ROOMS.length;i++)if(!S.res[i])S.res[i]={k:ROOMS[i].k,solved:false,score:0,secs:0,wrong:0,hints:0};S.room=ROOMS.length}
+  else S.room++;
+  if(S.room>=ROOMS.length){S.done=true;S.t1=now()}
+  save();
+  if(S.done)return results();
+  if(solved){R.locked=true;say(`Solved. ${S.res[S.room-1].score} points. Next room…`,'ok');setTimeout(enter,1300)}else enter()}
+
+/* ---------------- room 1: observation ---------------- */
+function roomObs(){
+  const all=['estop','air','key','door','part','main'];
+  const pick=all.map(k=>[R.rnd(),k]).sort((a,b)=>a[0]-b[0]).slice(0,4).map(a=>a[1]);
+  R.bad=new Set(pick);R.hintText=()=>`${R.bad.size} thing${R.bad.size===1?'':'s'} still stop${R.bad.size===1?'s':''} the line. Compare every item on the checklist with the picture, one by one.`;
+  frame('Find what is stopping the line',
+   `The station will not start. The start-up checklist on the wall says the line runs only when <b>all</b> of these are true:<br>
+    1. Main switch at <b>I</b> (on) · 2. Emergency stop released (<b>green</b> ring showing) · 3. Air pressure <b>5 bar or more</b> · 4. Key switch on <b>AUTO</b> · 5. Guard door <b>closed</b> · 6. <b>No part</b> at the entry sensor.<br>
+    Tap anything that is wrong to fix it, then press the green START. Tapping something that was fine costs points.`,
+   `<div class="stage" id="st"></div>`);
+  const draw=()=>{const b=R.bad,psi=b.has('air')?2:6,ang=-120+psi*30;
+   $('st').innerHTML=`<svg viewBox="0 0 800 430" role="img" aria-label="Lab station">
+    <rect width="800" height="430" fill="#150c0d"/><rect x="0" y="330" width="800" height="100" fill="#22191a"/>
+    <!-- conveyor -->
+    <rect x="150" y="250" width="520" height="26" rx="6" fill="#2b2b2e"/><rect x="150" y="276" width="520" height="54" fill="#cfd2d6"/>
+    <g class="hot" data-k="part"><rect class="hl" x="158" y="198" width="74" height="56" fill="transparent"/>
+      <rect x="170" y="150" width="10" height="100" fill="#8c9197"/><rect x="164" y="200" width="22" height="14" fill="#1F5FD1"/>
+      <line x1="186" y1="207" x2="${b.has('part')?196:232}" y2="207" stroke="#ff4040" stroke-width="2"/>
+      ${b.has('part')?'<rect x="196" y="218" width="34" height="32" rx="4" fill="#b8232a"/>':''}
+      <text x="150" y="142" fill="#A8968E" font-size="13">Entry sensor</text></g>
+    <!-- guard door -->
+    <g class="hot" data-k="door"><rect class="hl" x="420" y="120" width="150" height="130" fill="transparent"/>
+      <rect x="420" y="120" width="150" height="130" fill="none" stroke="#8c9197" stroke-width="4"/>
+      ${b.has('door')?'<polygon points="420,120 470,100 470,230 420,250" fill="#9fd0ff" opacity=".35" stroke="#9fd0ff"/>':'<rect x="424" y="124" width="142" height="122" fill="#9fd0ff" opacity=".18"/><line x1="495" y1="124" x2="495" y2="246" stroke="#8c9197"/>'}
+      <text x="452" y="112" fill="#A8968E" font-size="13">Guard door</text></g>
+    <!-- air unit -->
+    <g class="hot" data-k="air"><rect class="hl" x="600" y="40" width="170" height="120" fill="transparent"/>
+      <rect x="610" y="118" width="150" height="10" fill="#8c9197"/>
+      <circle cx="725" cy="84" r="34" fill="#f2f2f0" stroke="#555" stroke-width="3"/>
+      ${[0,2,4,6,8].map(v=>{const a=(-120+v*30)*Math.PI/180;return `<text x="${725+25*Math.sin(a)-4}" y="${84-25*Math.cos(a)+4}" font-size="10" fill="#333">${v}</text>`}).join('')}
+      <line x1="725" y1="84" x2="${725+22*Math.sin(ang*Math.PI/180)}" y2="${84-22*Math.cos(ang*Math.PI/180)}" stroke="#c21a27" stroke-width="3"/>
+      <text x="713" y="104" font-size="9" fill="#333">bar</text>
+      <circle cx="640" cy="123" r="11" fill="#444"/><rect x="${b.has('air')?634:616}" y="${b.has('air')?96:118}" width="${b.has('air')?12:48}" height="${b.has('air')?54:10}" rx="4" fill="#d00000"/>
+      <text x="606" y="58" fill="#A8968E" font-size="13">Air valve</text><text x="700" y="40" fill="#A8968E" font-size="13">Pressure</text></g>
+    <!-- panel -->
+    <rect x="150" y="286" width="520" height="38" fill="#e6e7e9"/>
+    <g class="hot" data-k="main"><rect class="hl" x="20" y="150" width="96" height="140" fill="transparent"/>
+      <rect x="30" y="170" width="76" height="110" rx="6" fill="#d9dadd"/><circle cx="68" cy="230" r="24" fill="#f2c200"/>
+      <rect x="62" y="${b.has('main')?226:206}" width="${b.has('main')?30:12}" height="${b.has('main')?12:30}" rx="4" fill="#d00000"/>
+      <text x="62" y="192" font-size="13" fill="#222" font-weight="700">I</text><text x="94" y="236" font-size="13" fill="#222" font-weight="700">O</text>
+      <text x="26" y="162" fill="#A8968E" font-size="13">Main switch</text></g>
+    <g class="hot" data-k="start"><circle class="hl" cx="250" cy="305" r="14" fill="#2ea043" stroke="#0b3d1c" stroke-width="2"/><text x="270" y="310" font-size="12" fill="#222" font-weight="700">START</text></g>
+    <g class="hot" data-k="key"><rect class="hl" x="360" y="288" width="120" height="34" fill="transparent"/>
+      <circle cx="400" cy="305" r="13" fill="#9aa0a6"/><rect x="397" y="${293}" width="6" height="14" fill="#222" transform="rotate(${b.has('key')?-45:45} 400 305)"/>
+      <text x="350" y="302" font-size="10" fill="#222" font-weight="700">MAN</text><text x="420" y="302" font-size="10" fill="#222" font-weight="700">AUTO</text></g>
+    <g class="hot" data-k="estop"><rect class="hl" x="560" y="284" width="90" height="42" fill="transparent"/>
+      <rect x="580" y="288" width="36" height="34" rx="4" fill="#f2c200"/><circle cx="598" cy="305" r="15" fill="${b.has('estop')?'#d00000':'#2ea043'}"/><circle cx="598" cy="305" r="${b.has('estop')?13:10}" fill="#c21a27" stroke="#7a0c14"/>
+      <text x="622" y="309" font-size="10" fill="#222" font-weight="700">E-STOP</text></g>
+    <!-- distractors -->
+    <g class="hot" data-k="plc"><rect class="hl" x="270" y="150" width="110" height="80" rx="4" fill="#2e3236"/>${[0,1,2,3,4,5].map(i=>`<rect x="${284+i*15}" y="170" width="8" height="5" fill="${i%2?'#2bff6a':'#0d3b1e'}"/>`).join('')}<text x="294" y="212" fill="#cfd2d6" font-size="12">PLC · RUN</text></g>
+    <g class="hot" data-k="lamp"><rect class="hl" x="96" y="60" width="26" height="70" fill="transparent"/><rect x="104" y="60" width="10" height="70" fill="#555"/><circle cx="109" cy="62" r="9" fill="#5a1a1c"/><circle cx="109" cy="84" r="9" fill="#5a4a12"/><circle cx="109" cy="106" r="9" fill="#123a22"/></g>
+    <g class="hot" data-k="motor"><rect class="hl" x="672" y="246" width="70" height="46" rx="20" fill="#6f7880"/></g>
+   </svg>`;
+   $('st').querySelectorAll('[data-k]').forEach(g=>g.onclick=()=>{if(R.locked)return;const k=g.dataset.k;
+     if(k==='start'){if(R.bad.size===0){finishRoom(true)}else wrong('The line did not start. Something on the checklist is still not true.');return}
+     if(R.bad.has(k)){R.bad.delete(k);draw();say('Fixed.','ok')}else wrong('That was fine as it was. Compare with the checklist before you tap.')})};
+  draw()}
+
+/* ---------------- room 2: logic ---------------- */
+function roomLogic(){
+  const SP=[
+   {t:'The motor may run only when the <b>guard door is closed (A)</b> and the <b>start button is held (B)</b>, and it must stop when the <b>overheat sensor (C)</b> is active.',f:(a,b,c)=>a&&b&&!c,ans:['AND','NOT','AND']},
+   {t:'The warning lamp must light when <b>exactly one</b> of the two light barriers <b>(A, B)</b> is blocked, but only while the <b>line is running (C)</b>.',f:(a,b,c)=>(a!==b)&&c,ans:['XOR','BUF','AND']},
+   {t:'The valve must open when <b>either operator button (A or B)</b> is pressed, but never while the <b>emergency stop (C)</b> is active.',f:(a,b,c)=>(a||b)&&!c,ans:['OR','NOT','AND']},
+   {t:'The buzzer must sound when <b>both sensors (A and B)</b> see a part, and also whenever the <b>test button (C)</b> is pressed.',f:(a,b,c)=>(a&&b)||c,ans:['AND','BUF','OR']}];
+  const sp=SP[Math.floor(R.rnd()*SP.length)];
+  R.g=['AND','BUF','AND'];R.in=[0,0,0];
+  if(R.g.join()===sp.ans.join())R.g=['OR','NOT','OR'];
+  R.hintText=()=>`Gate 1 should be <b>${sp.ans[0]}</b>. Work out the other two from the sentence.`;
+  const G={AND:(a,b)=>a&&b,OR:(a,b)=>a||b,XOR:(a,b)=>a!==b,BUF:a=>a,NOT:a=>!a};
+  const out=(a,b,c)=>G[R.g[2]](G[R.g[0]](!!a,!!b),G[R.g[1]](!!c));
+  frame('Wire the safety logic',
+   `${sp.t}<br><br>The circuit below has three gates. <b>Gate 1</b> combines A and B. <b>Gate 2</b> either passes C through (BUF) or inverts it (NOT). <b>Gate 3</b> combines the two results and drives the output.<br>
+    AND = both must be on · OR = at least one on · XOR = exactly one on. Flip the inputs to test, then press Check. Each wrong Check costs points.`,
+   `<div class="card" style="margin-top:10px">
+     <div class="row" id="ins"></div>
+     <div class="row" style="margin-top:14px;align-items:flex-end">
+      <div class="gate"><label class="f">Gate 1 (A, B)</label><select id="g0"><option>AND</option><option>OR</option><option>XOR</option></select></div>
+      <div class="gate"><label class="f">Gate 2 (C)</label><select id="g1"><option>BUF</option><option>NOT</option></select></div>
+      <div class="gate"><label class="f">Gate 3 (output)</label><select id="g2"><option>AND</option><option>OR</option></select></div>
+      <div style="flex:1"></div>
+      <div style="text-align:center"><div class="f" style="font:600 12px Inter;color:var(--mut)">OUTPUT</div><svg viewBox="0 0 60 60" style="width:60px"><circle id="lamp" cx="30" cy="30" r="22" fill="#3a2a10" stroke="#555" stroke-width="3"/></svg></div>
+     </div>
+     <div class="row" style="margin-top:14px"><button class="btn" id="chk">Check</button></div></div>`);
+  const draw=()=>{$('ins').innerHTML=['A','B','C'].map((n,i)=>`<span class="sw ${R.in[i]?'on':''}" data-i="${i}">${n} = ${R.in[i]}</span>`).join('');
+    $('ins').querySelectorAll('.sw').forEach(s=>s.onclick=()=>{if(R.locked)return;R.in[+s.dataset.i]^=1;draw()});
+    $('lamp').setAttribute('fill',out(...R.in)?'#E8B04A':'#3a2a10')};
+  [0,1,2].forEach(i=>{$('g'+i).value=R.g[i];$('g'+i).onchange=e=>{R.g[i]=e.target.value;draw()}});
+  $('chk').onclick=()=>{if(R.locked)return;let bad=0;for(let n=0;n<8;n++){const a=n&1,b=n>>1&1,c=n>>2&1;if(!!out(a,b,c)!==!!sp.f(!!a,!!b,!!c))bad++}
+    if(!bad)finishRoom(true);else wrong(`Not yet: the output is wrong for ${bad} of the 8 input combinations.`)};
+  draw()}
+
+/* ---------------- room 3: mechanism ---------------- */
+function roomMech(){
+  const d=4,b=3.5,c=3,W=800,H=470,sc=76,ox=230,oy=372;
+  const q=v=>Math.round(v*20)/20;
+  const ta=q(1.15+R.rnd()*0.65),th=q(0.5+R.rnd()*1.2);
+  R.a=q(ta>1.5?1.05:1.9);R.h=q(th>1.1?0.3:1.8);R.th=0.6;
+  R.hintText=()=>`Set the crank length to <b>${ta.toFixed(2)}</b>. Then tune only the tracer offset.`;
+  const pose=(a,h,t)=>{const Bx=a*Math.cos(t),By=a*Math.sin(t),dx=d-Bx,dy=-By,L=Math.hypot(dx,dy);
+    const al=Math.acos(Math.max(-1,Math.min(1,(b*b+L*L-c*c)/(2*b*L)))),ph=Math.atan2(dy,dx)+al;
+    const Cx=Bx+b*Math.cos(ph),Cy=By+b*Math.sin(ph),ux=Math.cos(ph),uy=Math.sin(ph);
+    return{B:[Bx,By],C:[Cx,Cy],P:[Bx+0.5*b*ux-h*uy,By+0.5*b*uy+h*ux]}};
+  const curve=(a,h)=>{const o=[];for(let i=0;i<180;i++)o.push(pose(a,h,i/180*2*Math.PI).P);return o};
+  const tgt=[0.4,1.9,3.3,4.9].map(t=>pose(ta,th,t).P);
+  const err=()=>{const cv=curve(R.a,R.h);return Math.max(...tgt.map(p=>Math.min(...cv.map(x=>Math.hypot(x[0]-p[0],x[1]-p[1])))))};
+  const X=p=>[ox+p[0]*sc,oy-p[1]*sc];R.err=err;R.ans=[ta,th];
+  frame('Tune the mechanism',
+   `This is a four-bar linkage. The motor turns the short <b>crank</b>; the gold point on the middle link draws a closed curve. A machine needs that point to pass through the <b>four red targets</b>.<br>
+    Change the two sliders until the gold curve goes through all four targets, then press Check. Moving the sliders is free. A wrong Check costs points.`,
+   `<div class="stage"><svg id="sv" viewBox="0 0 ${W} ${H}"></svg></div>
+    <div class="card" style="margin-top:10px"><div class="grid">
+      <div><label class="f">Crank length: <b class="mono" id="av"></b></label><input type="range" id="sa" min="1" max="2" step="0.05"></div>
+      <div><label class="f">Tracer offset from the link: <b class="mono" id="hv"></b></label><input type="range" id="sh" min="0" max="2" step="0.05"></div></div>
+     <div class="row" style="margin-top:12px"><button class="btn" id="chk">Check</button><span class="mono" style="color:var(--mut);font-size:13px" id="er"></span></div></div>`);
+  $('sa').value=R.a;$('sh').value=R.h;
+  let raf=0,last=performance.now();
+  const draw=()=>{const cv=curve(R.a,R.h),p=pose(R.a,R.h,R.th),A=X([0,0]),D=X([d,0]),B=X(p.B),C=X(p.C),P=X(p.P);
+    $('sv').innerHTML=`<rect width="${W}" height="${H}" fill="#0c0708"/>
+     <path d="M${cv.map(x=>X(x).map(v=>v.toFixed(1)).join(',')).join('L')}Z" fill="none" stroke="#E8B04A" stroke-width="2.5" opacity=".9"/>
+     ${tgt.map(t=>{const x=X(t);return `<circle cx="${x[0]}" cy="${x[1]}" r="9" fill="none" stroke="#ff4d57" stroke-width="3"/><circle cx="${x[0]}" cy="${x[1]}" r="2.5" fill="#ff4d57"/>`}).join('')}
+     <line x1="${A[0]-30}" y1="${A[1]+16}" x2="${D[0]+30}" y2="${D[1]+16}" stroke="#555" stroke-width="3"/>
+     <polygon points="${B[0]},${B[1]} ${C[0]},${C[1]} ${P[0]},${P[1]}" fill="#1F5FD122" stroke="#5b8de0" stroke-width="2"/>
+     <line x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke="#F3E9DF" stroke-width="7" stroke-linecap="round"/>
+     <line x1="${B[0]}" y1="${B[1]}" x2="${C[0]}" y2="${C[1]}" stroke="#5b8de0" stroke-width="7" stroke-linecap="round"/>
+     <line x1="${D[0]}" y1="${D[1]}" x2="${C[0]}" y2="${C[1]}" stroke="#9aa0a6" stroke-width="7" stroke-linecap="round"/>
+     ${[A,B,C,D].map(v=>`<circle cx="${v[0]}" cy="${v[1]}" r="7" fill="#170E10" stroke="#F3E9DF" stroke-width="2"/>`).join('')}
+     <circle cx="${P[0]}" cy="${P[1]}" r="7" fill="#E8B04A"/>
+     <text x="${A[0]-52}" y="${A[1]+40}" fill="#A8968E" font-size="13">motor</text>`;
+    $('av').textContent=R.a.toFixed(2);$('hv').textContent=R.h.toFixed(2)};
+  const loop=t=>{R.th+=(t-last)/1000*1.6;last=t;draw();raf=requestAnimationFrame(loop)};raf=requestAnimationFrame(loop);
+  R.stop=()=>cancelAnimationFrame(raf);
+  $('sa').oninput=e=>{R.a=+e.target.value};$('sh').oninput=e=>{R.h=+e.target.value};
+  $('chk').onclick=()=>{if(R.locked)return;const e=err();if(e<0.075)finishRoom(true);else wrong(e<0.25?'Close, but the curve misses at least one target. Look at each red ring.':'The curve is far from at least one target.')}}
+
+/* ---------------- room 4: diagnosis ---------------- */
+function roomDiag(){
+  const FA=[['b1','The entry sensor B1 is dead'],['b3','The stopper sensor B3 is stuck on'],['jam','The stopper cylinder is mechanically jammed'],['air','There is no compressed air'],['slip','The belt is slipping on the drive roller'],['drv','The motor drive has tripped'],['b4','The exit sensor B4 is dead']];
+  const real=['b1','b3','jam','air','slip'];R.f=real[Math.floor(R.rnd()*real.length)];
+  const opts=FA.map(x=>[R.rnd(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+  R.hintText=()=>({b1:'Look at the very first step: is the controller told that a part arrived?',b3:'Watch B3 before any part reaches the stopper.',jam:'Compare what the controller asks the stopper to do with what the stopper reports back, and check the air.',air:'Compare what the controller asks the stopper to do with what the stopper reports back, and check the air.',slip:'Every signal looks healthy. Compare the motor speed with how fast the part really moves.'}[R.f]);
+  frame('Read the signals, name the fault',
+   `<b>How this line works:</b> a part is placed at the entry. Sensor <b>B1</b> sees it and the controller starts the <b>motor</b> (35 Hz). The part rides to the <b>stopper</b>, where sensor <b>B3</b> sees it. After one second the controller switches <b>Y1</b> on to pull the stopper back; the stopper needs <b>air (B7 = 1)</b> to move and reports <b>1B2 = 1</b> when it is fully back. The part then rides to the exit sensor <b>B4</b>. A healthy part takes about 4 seconds from entry to stopper.<br><br>
+    One thing is broken. Press <b>Run</b> as often as you like and watch the signals, then choose the fault. You get <b>two</b> guesses.`,
+   `<div class="stage"><svg id="dv" viewBox="0 0 800 210"></svg></div>
+    <div class="card" style="margin-top:10px"><div class="row"><button class="btn sec" id="run">Run</button><span class="mono" id="clk" style="color:var(--mut)">t = 0.0 s</span><span class="mono" id="stt" style="color:var(--gold)"></span></div>
+     <div class="grid" style="margin-top:10px"><table><thead><tr><th>Signal</th><th>Meaning</th><th>Now</th></tr></thead><tbody id="io1"></tbody></table><table><thead><tr><th>Signal</th><th>Meaning</th><th>Now</th></tr></thead><tbody id="io2"></tbody></table></div></div>
+    <div class="card" style="margin-top:10px"><label class="f" for="dg">The fault is</label><select id="dg"><option value="">Choose the fault</option>${opts.map(o=>`<option value="${o[0]}">${o[1]}</option>`).join('')}</select>
+     <div class="row" style="margin-top:12px"><button class="btn" id="chk">Confirm diagnosis</button></div></div>`);
+  let m,raf=0,last=0;
+  const reset=()=>{m={t:0,x:40,run:false,mot:0,y1:0,stp:1,hold:0,msg:'Idle',done:false}};reset();
+  const sig=()=>{const f=R.f,atEntry=m.x<70,atStop=Math.abs(m.x-398)<8,atExit=m.x>690;
+    return{B1:f==='b1'?0:+(atEntry&&!m.gone),B3:f==='b3'?1:+atStop,B4:+atExit,B7:f==='air'?0:1,'1B1':+(m.stp>0.95),'1B2':+(m.stp<0.05),Y1:m.y1,MOT:m.mot}};
+  const step=dt=>{if(!m.run||m.done)return;m.t+=dt;const s=sig(),f=R.f;
+    if(!m.mot&&s.B1)m.mot=1;
+    if(f==='b3'&&m.t>1&&!m.y1){m.y1=1}
+    if(s.B3&&f!=='b3'){m.hold+=dt;if(m.hold>1)m.y1=1}
+    if(m.y1&&f!=='jam'&&f!=='air')m.stp=Math.max(0,m.stp-dt*3);
+    const v=m.mot?(f==='slip'?22:90):0;let nx=m.x+v*dt;if(m.stp>0.3&&m.x<=398)nx=Math.min(nx,398);m.x=nx;
+    if(m.x>760){m.gone=true}
+    m.msg=!m.mot?'Waiting for a part at B1':m.x>=398&&m.stp>0.3?(m.y1?'Y1 on, waiting for 1B2':'Part at stopper'):'Transporting';
+    if(m.t>9||m.gone){m.done=true;m.run=false;m.mot=0;m.msg=f==='b3'&&m.gone?'FAULT: part passed without stopping':'FAULT: cycle not completed in time';$('run').textContent='Run again'}};
+  const draw=()=>{const s=sig();
+    $('dv').innerHTML=`<rect width="800" height="210" fill="#0c0708"/><rect x="30" y="120" width="740" height="22" rx="6" fill="#2b2b2e"/><rect x="30" y="142" width="740" height="30" fill="#cfd2d6"/>
+     ${[['B1',55],['B3',398],['B4',715]].map(([n,x])=>`<rect x="${x-5}" y="60" width="10" height="36" fill="#1F5FD1"/><line x1="${x}" y1="96" x2="${x}" y2="120" stroke="${s[n]?'#E8B04A':'#ff404055'}" stroke-width="3"/><text x="${x-9}" y="52" fill="#A8968E" font-size="13">${n}</text>`).join('')}
+     <rect x="418" y="${88-30*(1-m.stp)}" width="12" height="34" fill="#3D8BFD"/><text x="436" y="80" fill="#A8968E" font-size="12">stopper</text>
+     ${m.gone?'':`<rect x="${m.x-16}" y="90" width="32" height="30" rx="4" fill="#b8232a"/>`}
+     <rect x="720" y="150" width="60" height="34" rx="16" fill="#6f7880"/><text x="726" y="200" fill="#A8968E" font-size="12">motor ${m.mot?'35 Hz':'0 Hz'}</text>`;
+    const row=(k,t)=>`<tr><td class="mono" style="color:var(--gold)">${k}</td><td>${t}</td><td><span class="bit ${s[k]?'on':''}">${s[k]}</span></td></tr>`;
+    $('io1').innerHTML=row('B1','Part at entry')+row('B3','Part at stopper')+row('B4','Part at exit')+row('B7','Air pressure OK');
+    $('io2').innerHTML=row('MOT','Motor command')+row('Y1','Pull stopper back')+row('1B1','Stopper is out')+row('1B2','Stopper is back');
+    $('clk').textContent='t = '+m.t.toFixed(1)+' s';$('stt').textContent=m.msg};
+  const loop=t=>{const dt=Math.min(0.05,(t-last)/1000);last=t;step(dt);draw();raf=requestAnimationFrame(loop)};last=performance.now();raf=requestAnimationFrame(loop);
+  R.stop=()=>cancelAnimationFrame(raf);
+  $('run').onclick=()=>{if(R.locked)return;reset();m.run=true;$('run').textContent='Running…'};
+  R.guess=0;
+  $('chk').onclick=()=>{if(R.locked)return;const v=$('dg').value;if(!v)return say('Choose a fault first.','info');
+    if(v===R.f)return finishRoom(true);R.guess++;R.wrong+=2;
+    if(R.guess>=2){R.locked=true;say('Not that either. This room is closed.','no');setTimeout(()=>finishRoom(false),1500)}else say('That is not the fault. One guess left: run it again and compare every signal with the description.','no')}}
+
+/* ---------------- room 5: sequencing ---------------- */
+function roomSeq(){
+  const POS=['A','B','C'],from=Math.floor(R.rnd()*3);let to=Math.floor(R.rnd()*2);if(to>=from)to++;
+  R.from=POS[from];R.to=POS[to];R.prog=[];
+  R.hintText=()=>`Start with: <b>MOVE ${R.from}</b>, <b>DOWN</b>, <b>GRIP</b>, <b>UP</b>. The arm must be up before it moves sideways.`;
+  const CM=['MOVE A','MOVE B','MOVE C','MOVE HOME','DOWN','UP','GRIP','RELEASE'];
+  frame('Program the robot',
+   `Write the program that takes the part from station <b>${R.from}</b> to station <b>${R.to}</b> and brings the arm back <b>HOME</b>.<br>
+    The robot does exactly what you write, one command at a time. Rules of this robot: it may only move sideways while it is <b>up</b>; it can only grip or release while it is <b>down</b>; at the end the part must sit in ${R.to}, the gripper must be open and the arm at HOME and up.<br>
+    Tap commands to add them, then press Run. A failed run costs points, so read your program before you run it.`,
+   `<div class="stage"><svg id="rv" viewBox="0 0 800 300"></svg></div>
+    <div class="card" style="margin-top:10px"><label class="f">Your program (<span id="n">0</span>/14)</label><div class="prog" id="pg"></div>
+     <div class="cmds">${CM.map(c=>`<button class="btn sec sm" data-c="${c}">${c}</button>`).join('')}</div>
+     <div class="row" style="margin-top:12px"><button class="btn" id="run">Run</button><button class="btn sec sm" id="undo">Undo</button><button class="btn sec sm" id="clr">Clear</button></div></div>`);
+  const XS={HOME:110,A:300,B:480,C:660};let v,anim=null;
+  const init=()=>{v={at:'HOME',down:false,grip:false,held:false,part:R.from,pc:-1,ax:XS.HOME,ay:70}};init();
+  const draw=()=>{const px=v.held?v.ax:XS[v.part],py=v.held?v.ay+58:222;
+    $('rv').innerHTML=`<rect width="800" height="300" fill="#0c0708"/><rect x="40" y="28" width="720" height="10" fill="#8c9197"/><rect x="0" y="250" width="800" height="50" fill="#22191a"/>
+     ${POS.map(p=>`<rect x="${XS[p]-46}" y="238" width="92" height="14" fill="${p===R.to?'#E8B04A':'#cfd2d6'}"/><text x="${XS[p]-5}" y="278" fill="${p===R.to?'#E8B04A':'#A8968E'}" font-size="16" font-weight="700">${p}</text>`).join('')}
+     <text x="${XS.HOME-24}" y="278" fill="#A8968E" font-size="14">HOME</text>
+     <rect x="${px-18}" y="${py}" width="36" height="16" rx="3" fill="#b8232a"/>
+     <rect x="${v.ax-26}" y="20" width="52" height="26" rx="4" fill="#2b2f33"/><rect x="${v.ax-5}" y="46" width="10" height="${v.ay-20}" fill="#F1F1EF"/>
+     <rect x="${v.ax-24}" y="${v.ay+26}" width="48" height="10" fill="#3a3f45"/>
+     <rect x="${v.ax-(v.grip?20:26)}" y="${v.ay+36}" width="6" height="28" fill="#bfc4c9"/><rect x="${v.ax+(v.grip?14:20)}" y="${v.ay+36}" width="6" height="28" fill="#bfc4c9"/>`;
+    $('pg').innerHTML=R.prog.map((c,i)=>`<span class="chip ${i===v.pc?'cur':''}">${i+1}. ${c}</span>`).join('')||'<span style="color:var(--mut);font-size:13px">Empty. Tap the commands below.</span>';$('n').textContent=R.prog.length};
+  const busy=()=>!!anim;
+  app.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{if(R.locked||busy())return;if(R.prog.length>=14)return say('Fourteen commands is the limit. A good program needs fewer.','info');R.prog.push(b.dataset.c);draw()});
+  $('undo').onclick=()=>{if(R.locked||busy())return;R.prog.pop();init();draw()};$('clr').onclick=()=>{if(R.locked||busy())return;R.prog=[];init();draw()};
+  const exec=c=>{ // returns error text or null
+    if(c.startsWith('MOVE')){const d=c.slice(5);if(v.down)return 'Crash: the arm tried to move sideways while it was down.';v.at=d;return null}
+    if(c==='DOWN'){if(v.at==='HOME')return 'Nothing to reach at HOME: the arm went down onto the table.';if(v.down)return 'The arm is already down.';v.down=true;return null}
+    if(c==='UP'){if(!v.down)return 'The arm is already up.';v.down=false;return null}
+    if(c==='GRIP'){if(!v.down)return 'The gripper closed in the air: it can only grip while down.';if(v.grip)return 'The gripper is already closed.';v.grip=true;if(v.part===v.at)v.held=true;else return 'The gripper closed on nothing: there is no part at '+v.at+'.';return null}
+    if(c==='RELEASE'){if(!v.grip)return 'The gripper is already open.';if(!v.down)return 'The part was dropped from the air: release only while down.';v.grip=false;if(v.held){v.held=false;v.part=v.at}return null}};
+  $('run').onclick=()=>{if(R.locked||busy())return;if(!R.prog.length)return say('Add some commands first.','info');init();say('Running…','info');let i=0;
+    const next=()=>{if(i>=R.prog.length){anim=null;v.pc=-1;draw();
+        const ok=v.part===R.to&&!v.held&&!v.grip&&v.at==='HOME'&&!v.down;
+        if(ok)return finishRoom(true);
+        return wrong(v.part!==R.to||v.held?`Program ended, but the part is not resting in ${R.to}.`:v.grip?'Program ended with the gripper still closed.':'The part is in place, but the arm is not back at HOME and up.')}
+      v.pc=i;const e=exec(R.prog[i]);const tx=XS[v.at],ty=v.down?170:70,sx=v.ax,sy=v.ay,t0=performance.now();
+      const fr=t=>{const k=Math.min(1,(t-t0)/380);v.ax=sx+(tx-sx)*k;v.ay=sy+(ty-sy)*k;draw();if(k<1){anim=requestAnimationFrame(fr)}else if(e){anim=null;wrong(`Step ${i+1} (${R.prog[i]}): ${e}`)}else{i++;anim=setTimeout(next,90)}};
+      anim=requestAnimationFrame(fr)};next()};
+  R.stop=()=>{cancelAnimationFrame(anim);clearTimeout(anim)};
+  draw()}
+
+/* ---------------- results + submit ---------------- */
+function docId(e){return e.replace(/[^a-z0-9._@-]/g,'_').slice(0,120)}
+async function submit(){
+  const total=S.res.reduce((a,r)=>a+r.score,0);
+  const doc={name:S.who.name.slice(0,80),email:S.who.email.slice(0,120),phone:S.who.phone.slice(0,20),uni:S.who.uni.slice(0,80),major:S.who.major.slice(0,80),year:S.who.year,prog:S.who.prog,track:S.who.track,
+    total,rooms:S.res.map(r=>({k:r.k,solved:r.solved,score:r.score,secs:r.secs,wrong:r.wrong,hints:r.hints})),secs:Math.round(((S.t1||now())-S.t0)/1000),at:now(),ua:navigator.userAgent.slice(0,160),v:1};
+  const A=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+  const FS=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+  const fs=FS.getFirestore(A.initializeApp(window.STARK_FB,'apply'));
+  await FS.setDoc(FS.doc(fs,'applicants',docId(S.who.email)),doc)}
+function results(){clearInterval(tick);$('pTime').hidden=true;$('pRoom').hidden=true;
+  const total=S.res.reduce((a,r)=>a+r.score,0);
+  app.innerHTML=`<span class="eyebrow">Finished</span><h1>${total>=350?'The line is <em>running.</em>':total>=200?'Most of the line is <em>back.</em>':'You gave it a <em>try.</em>'}</h1>
+   <p class="lead">${esc(S.who.name)}, your result is ${total} out of 500.</p>
+   <div class="res">${S.res.map((r,i)=>`<div><b>${r.score}</b><span>${ROOMS[i].n}${r.solved?'':' · not solved'}</span></div>`).join('')}</div>
+   <div class="card"><div id="sub" class="msg info show">Sending your result…</div>
+   <p style="color:var(--mut);margin:12px 0 0">The score is one part of the decision. We also look at how you worked through each room. Shortlisted candidates are invited to a second round in the lab.</p></div>`;
+  const ok=()=>{S.sent=true;save();$('sub').className='msg ok show';$('sub').textContent='Your application is in. We will contact you by email.'};
+  const fail=e=>{const dup=/permission|PERMISSION/.test(String(e&&(e.code||e.message)));$('sub').className='msg no show';
+    $('sub').innerHTML=dup?'An application with this email already exists, so this one was not saved.':'Could not send your result (connection problem). <button class="btn sm" id="again" style="margin-left:8px">Try again</button>';
+    if($('again'))$('again').onclick=()=>{$('sub').className='msg info show';$('sub').textContent='Sending your result…';submit().then(ok,fail)}};
+  if(S.sent)ok();else submit().then(ok,fail)}
+
+/* ---------------- boot ---------------- */
+load();
+if(S&&S.t0){startClock();if(S.done)results();else enter()}else intro();
+</script>
+</body>
+</html>
