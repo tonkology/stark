@@ -123,6 +123,15 @@ nav{overflow-x:auto} nav button{min-width:58px}
 .pbar{height:8px;background:var(--g4);border-radius:8px;overflow:hidden;margin-top:6px} .pbar i{display:block;height:100%;background:var(--g1);border-radius:8px}
 .shot{border:2px dashed var(--n4);border-radius:var(--r);overflow:hidden;margin:10px 0;background:var(--g5)}
 .shot canvas{display:block;width:100%;height:auto}
+.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:10px 0}
+.shots.one{grid-template-columns:1fr}
+.shots .ph{position:relative;border:2px solid var(--g4);border-radius:var(--r);overflow:hidden;background:var(--g5)}
+.shots .ph canvas{display:block;width:100%;height:auto;cursor:zoom-in}
+.shots .ph .no{position:absolute;top:6px;inset-inline-start:6px;background:#1A0E0F;color:#fff;font:800 12px Alexandria,sans-serif;border-radius:999px;padding:2px 8px}
+.shots .ph .x{position:absolute;top:6px;inset-inline-end:6px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(26,14,15,.75);color:#fff;font-size:14px;cursor:pointer}
+.shots.big{grid-template-columns:1fr}
+.more{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--g5);border:1px dashed var(--g3);font-size:13px;line-height:1.7}
+.stepimg{display:inline-block;font-size:11px;font-weight:700;background:var(--g4);color:var(--g1);border-radius:999px;padding:0 7px;margin-inline-start:6px}
 .drop{display:block;padding:38px 12px;text-align:center;font-weight:700;color:var(--g1);cursor:pointer;font-size:14px}
 .drop small{display:block;font-weight:400;color:var(--n3);margin-top:4px}
 .safety{background:#fdecea;border:1px solid #f1b5ae;border-radius:12px;padding:12px;font-size:13px;color:#8a1c14;margin-bottom:10px}
@@ -1320,7 +1329,7 @@ function personSheet(n){const ts=db.tasks.filter(x=>x.assignee===n&&x.status!=='
     <button class="btn dang sm" onclick="adminDo(()=>{rmMember('${jsq(n)}');closeM()})">${t('removeP')}</button><button class="btn sec sm" onclick="closeM()">${t('cancel')}</button></div>`)}
 
 /* ---------- Ask STARK (conversation) ---------- */
-let askImg='',askSt='',askQ='',askBusy=false,askThread=[],askConv='',askImgTurn=-1;
+let askImgs=[],askBig=-1,askNewImgs=0,askSt='',askQ='',askBusy=false,askThread=[],askConv='';const ASK_MAX_IMGS=5;
 const ASK_CATS=['FESTO Station','CNC','Robot / AMR'];
 function askStations(){return db.items.filter(x=>ASK_CATS.includes(x.category)).slice(0,150)}
 function stInfo(v){if(!v)return null;if(v.startsWith('lab:')){const r=LOCS[+v.slice(4)];return{id:v,name:r,location:r,category:'Lab',notes:''}}
@@ -1328,34 +1337,39 @@ function stInfo(v){if(!v)return null;if(v.startsWith('lab:')){const r=LOCS[+v.sl
 function kbFor(st){if(!st)return[];const key=(st.name||'').toLowerCase().split(/[^a-z0-9؀-ۿ]+/).filter(w=>w.length>3);
   return db.docs.map(d=>{const tg=(d.tags||[]).map(x=>x.toLowerCase()),hay=(d.title+' '+tg.join(' ')).toLowerCase();let sc=tg.includes(st.id.toLowerCase())?5:0;key.forEach(w=>{if(hay.includes(w))sc++});return[sc,d]})
     .filter(a=>a[0]>0).sort((a,b)=>b[0]-a[0]).slice(0,3).map(a=>({title:a[1].title,body:(a[1].body||'').slice(0,1800)}))}
-function askPick(inp){const q=document.getElementById('ak_q');if(q)askQ=q.value;shrink(inp.files[0],1280,.8,d=>{askImg=d;askImgTurn=askThread.length;render()})}
+function askPick(inp){const q=document.getElementById('ak_q');if(q)askQ=q.value;const fs=[...(inp.files||[])].slice(0,ASK_MAX_IMGS-askImgs.length);
+  if(inp.files&&inp.files.length>fs.length)alert(lang==='ar'?`الحد ${ASK_MAX_IMGS} صور في المحادثة`:`Up to ${ASK_MAX_IMGS} photos per conversation`);
+  let left=fs.length;fs.forEach(f=>shrink(f,1280,.8,d=>{askImgs.push(d);askNewImgs++;if(--left===0)render()}))}
+function askDrop(i){const q=document.getElementById('ak_q');if(q)askQ=q.value;askImgs.splice(i,1);askNewImgs=Math.max(0,askNewImgs-1);askBig=-1;render()}
 function lastAns(withSteps){for(let i=askThread.length-1;i>=0;i--){const m=askThread[i];if(m.r==='a'&&(!withSteps||(m.a.steps||[]).some(s=>typeof s.x==='number')))return m.a}return null}
-function newConv(){askThread=[];askConv='';askImg='';askImgTurn=-1;askQ='';render()}
+function newConv(){askThread=[];askConv='';askImgs=[];askNewImgs=0;askBig=-1;askQ='';render()}
 function vAsk(){const sts=askStations(),st=stInfo(askSt),nc=MODE==='intern'&&st&&!canUse(ME(),st.location),started=askThread.length>0;
   return `<div class="hero"><div><div class="hi">✨ ${t('askTitle')}</div><div class="tl">${t('askSub')}</div></div>${started?`<button class="btn sec sm" onclick="newConv()">＋ ${t('newConv')}</button>`:''}</div>
   <div class="card"><label class="f">${t('station')}</label><select id="ak_s" onchange="askSt=this.value;askQ=document.getElementById('ak_q').value;render()"><option value="">${t('general')}</option>
      ${LOCS.slice(0,7).map((r,i)=>`<option value="lab:${i}" ${askSt==='lab:'+i?'selected':''}>${esc(r)}</option>`).join('')}${sts.map(x=>`<option value="${x.id}" ${askSt===x.id?'selected':''}>${esc(x.id)} · ${esc(x.name)}</option>`).join('')}</select>
    ${nc?`<div class="safety" style="margin-top:10px">🔒 ${t('notCleared')}</div>`:''}
-   <div class="shot">${askImg?`<canvas id="ak_c"></canvas>`:`<label class="drop">📷 ${t('takePhoto')}<small>${t('photoHint')}</small><input type="file" accept="image/*" capture="environment" hidden onchange="askPick(this)"></label>`}</div>
-   ${askImg?`<label class="btn sec sm" style="display:inline-flex">📷 ${t('retake')}<input type="file" accept="image/*" capture="environment" hidden onchange="askPick(this)"></label>`:''}</div>
-  ${started?`<div class="chat">${askThread.map((m,i)=>m.r==='u'?`<div class="bub u">${m.img?'<span class="hint">📷 '+t('newPhoto')+'</span><br>':''}${esc(m.t)}</div>`:`<div class="bub a">${askAnswer(m.a,i===askThread.length-1)}</div>`).join('')}
+   ${askImgs.length?`<div class="shots ${askImgs.length===1||askBig>=0?'one':''}">${askImgs.map((d,i)=>askBig>=0&&askBig!==i?'':`<div class="ph"><canvas id="ak_c${i}" onclick="askBig=askBig===${i}?-1:${i};render()"></canvas>${askImgs.length>1?`<span class="no">📷 ${i+1}</span>`:''}${askBusy?'':`<button class="x" title="✕" onclick="askDrop(${i})">✕</button>`}</div>`).join('')}</div>`
+     :`<div class="shot"><label class="drop">📷 ${t('takePhoto')}<small>${t('photoHint')}${lang==='ar'?' · تقدر ترفع لين '+ASK_MAX_IMGS+' صور (من الأمام والخلف والجنب)':' · up to '+ASK_MAX_IMGS+' photos (front, back, side)'}</small><input type="file" accept="image/*" multiple hidden onchange="askPick(this)"></label></div>`}
+   ${askImgs.length&&askImgs.length<ASK_MAX_IMGS?`<div class="row"><label class="btn sec sm" style="display:inline-flex">📷 ${lang==='ar'?'صوّر':'Camera'}<input type="file" accept="image/*" capture="environment" hidden onchange="askPick(this)"></label><label class="btn sec sm" style="display:inline-flex">🖼 ${lang==='ar'?'أضف صور':'Add photos'} (${askImgs.length}/${ASK_MAX_IMGS})<input type="file" accept="image/*" multiple hidden onchange="askPick(this)"></label></div>`:''}</div>
+  ${started?`<div class="chat">${askThread.map((m,i)=>m.r==='u'?`<div class="bub u">${m.img?'<span class="hint">📷 '+(m.img>1?m.img+' × ':'')+t('newPhoto')+'</span><br>':''}${esc(m.t)}</div>`:`<div class="bub a">${askAnswer(m.a,i===askThread.length-1)}</div>`).join('')}
     ${askBusy?`<div class="bub a"><span class="typing"><i></i><i></i><i></i></span> ${t('thinking')}</div>`:''}</div>`:''}
   <div class="card askbar"><textarea id="ak_q" rows="2" placeholder="${started?t('followPh'):t('askPh')}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();askSend()}">${esc(askQ)}</textarea>
    ${started?'':`<div style="margin:8px 0">${['q1','q2','q3'].map(k=>`<span class="pill" onclick="document.getElementById('ak_q').value='${jsq(t(k))}'">${t(k)}</span>`).join('')}</div>`}
    <div class="row" style="margin-top:8px"><button class="btn" onclick="askSend()" ${askBusy?'disabled':''}>${askBusy?'⏳ '+t('thinking'):'✨ '+(started?t('send'):t('askBtn'))}</button></div></div>
   ${db.asks.length&&!started?`<div class="card"><h2>🕘 ${t('recentAsks')}</h2>${db.asks.filter(a=>MODE==='director'||a.by===ME()).slice(0,8).map(askRow).join('')||'<div class="empty">—</div>'}</div>`:''}`}
-function askDraw(){const c=document.getElementById('ak_c');if(!c||!askImg)return;const im=new Image();im.onload=()=>{c.width=im.width;c.height=im.height;const g=c.getContext('2d');g.drawImage(im,0,0);
-  const a=lastAns(true);if(!a)return;const R=Math.max(16,im.width*.026);(a.steps||[]).forEach((s,i)=>{if(typeof s.x!=='number'||typeof s.y!=='number')return;const x=s.x*im.width,y=s.y*im.height;
+function askDraw(){const a=lastAns(true);askImgs.forEach((src,k)=>{const c=document.getElementById('ak_c'+k);if(!c)return;const im=new Image();im.onload=()=>{c.width=im.width;c.height=im.height;const g=c.getContext('2d');g.drawImage(im,0,0);
+  if(!a)return;const R=Math.max(16,im.width*.026);(a.steps||[]).forEach((s,i)=>{if(typeof s.x!=='number'||typeof s.y!=='number'||((s.img||1)-1)!==k)return;const x=s.x*im.width,y=s.y*im.height;
     g.beginPath();g.arc(x,y,R*1.25,0,7);g.fillStyle='rgba(255,255,255,.92)';g.fill();g.beginPath();g.arc(x,y,R,0,7);g.fillStyle='#E8B04A';g.fill();g.lineWidth=R*.16;g.strokeStyle='#7A0C14';g.stroke();
-    g.fillStyle='#1A0E0F';g.font='800 '+Math.round(R*1.15)+'px Alexandria,sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(i+1,x,y+R*.06)})};im.src=askImg}
+    g.fillStyle='#1A0E0F';g.font='800 '+Math.round(R*1.15)+'px Alexandria,sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(i+1,x,y+R*.06)})};im.src=src})}
 function askAnswer(a,last){const sup=a.needs_supervisor;return `${a.demo?`<div class="demo">ⓘ ${t('demoNote')}</div>`:''}
   ${(a.safety&&a.safety.length)||sup?`<div class="safety"><b>⚠️ ${t('safetyFirst')}</b>${(a.safety||[]).map(s=>'• '+esc(s)).join('<br>')}${sup?`<br><b style="margin-top:6px">${t('supervisor')}</b>`:''}</div>`:''}
   <div style="font-size:14px;line-height:1.7">${esc(a.summary||'')}</div>
-  ${(a.steps||[]).length?`<ol class="steps2">${a.steps.map(s=>`<li><span>${esc(s.text)}</span></li>`).join('')}</ol>`:''}
+  ${(a.steps||[]).length?`<ol class="steps2">${a.steps.map(s=>`<li><span>${esc(s.text)}${askImgs.length>1&&typeof s.x==='number'?`<span class="stepimg">📷 ${s.img||1}</span>`:''}</span></li>`).join('')}</ol>`:''}
+  ${(a.more_photos||[]).length?`<div class="more"><b>📷 ${lang==='ar'?'عشان أكون أدق، صوّر لي:':'To be more precise, send me photos of:'}</b><br>${a.more_photos.map(x=>'• '+esc(x)).join('<br>')}</div>`:''}
   ${last?`<div class="row" style="margin-top:10px;align-items:center"><span class="conf ${a.confidence||'medium'}">${t('confidence')}: ${t(a.confidence||'medium')}</span>
    ${askConv?(MODE==='director'?`<button class="btn sm" onclick="saveGuide('${askConv}')">📚 ${t('saveGuide')}</button>`:`<button class="btn sec sm" onclick="markAsk('${askConv}','suggested')">📚 ${t('suggest')}</button><button class="btn sec sm" onclick="markAsk('${askConv}','helped')">👍 ${t('helped')}</button>`):''}</div>`:''}`}
 function convTurns(a){return a.turns||[{r:'u',t:a.q},{r:'a',a:{summary:a.summary,steps:a.steps,safety:a.safety,confidence:a.confidence,needs_supervisor:a.needs_supervisor,demo:a.demo}}]}
-function openConv(id){const a=db.asks.find(k=>k.id===id);if(!a)return;askThread=convTurns(a).map(x=>Object.assign({},x));askConv=id;askSt=a.st||'';askImg='';askImgTurn=-1;askQ='';tab='ask';render()}
+function openConv(id){const a=db.asks.find(k=>k.id===id);if(!a)return;askThread=convTurns(a).map(x=>Object.assign({},x));askConv=id;askSt=a.st||'';askImgs=[];askNewImgs=0;askBig=-1;askQ='';tab='ask';render()}
 function askRow(a){const n=convTurns(a).filter(x=>x.r==='u').length;return `<div class="rowx" style="cursor:pointer" onclick="openConv('${a.id}')"><div><div class="tt">${esc(a.q)}</div><div class="tm">${esc(a.by)} · ${esc(a.stName||'—')} · ${fdate(a.date)}${n>1?' · 💬 '+n:''}</div></div>
   <span class="tag ${a.status==='approved'?'tg-ok':a.status==='suggested'?'tg-out':'tg-miss'}">${a.status==='approved'?'📚':a.status==='suggested'?'💡':a.status==='helped'?'👍':'•'}</span></div>`}
 function markAsk(id,st){const a=db.asks.find(k=>k.id===id);if(a){a.status=st;save();render()}}
@@ -1371,17 +1385,17 @@ const DEMO_ANS=()=>({demo:true,confidence:'low',needs_supervisor:true,
   safety:lang==='ar'?['تأكد أن المفتاح الرئيسي مطفأ قبل توصيل أي كيبل.','منافذ L1 / N تحمل 230 فولت.']:['Make sure the main switch is off before plugging any cable.','The L1 / N sockets carry 230 V.'],
   steps:lang==='ar'?[{text:'شغّل مفتاح مزوّد الطاقة 24 فولت.',x:.25,y:.35},{text:'تأكد أن زر الطوارئ محرّر.',x:.62,y:.3},{text:'اضغط زر Start الأخضر.',x:.5,y:.68}]:[{text:'Switch on the 24 V power supply.',x:.25,y:.35},{text:'Check that the emergency stop is released.',x:.62,y:.3},{text:'Press the green Start button.',x:.5,y:.68}]});
 function histPayload(){return askThread.map(m=>m.r==='u'?{role:'user',content:m.t}:{role:'assistant',content:JSON.stringify({summary:m.a.summary||'',safety:m.a.safety||[],steps:(m.a.steps||[]).map(s=>({text:s.text})),confidence:m.a.confidence||'medium'})})}
-function askStore(st){const turns=askThread.map(m=>m.r==='u'?{r:'u',t:m.t}:{r:'a',a:{summary:m.a.summary||'',steps:(m.a.steps||[]).map(s=>({text:s.text,x:s.x,y:s.y})),safety:m.a.safety||[],confidence:m.a.confidence||'medium',needs_supervisor:!!m.a.needs_supervisor,demo:!!m.a.demo}});
+function askStore(st){const turns=askThread.map(m=>m.r==='u'?{r:'u',t:m.t}:{r:'a',a:{summary:m.a.summary||'',steps:(m.a.steps||[]).map(s=>({text:s.text,x:s.x,y:s.y,img:s.img})),more_photos:m.a.more_photos||[],safety:m.a.safety||[],confidence:m.a.confidence||'medium',needs_supervisor:!!m.a.needs_supervisor,demo:!!m.a.demo}});
   let a=askConv&&db.asks.find(k=>k.id===askConv);
   if(!a){askConv='ASK-'+Date.now().toString(36);a={id:askConv,by:WHO(),date:now(),st:st?st.id:'',stName:st?st.name:'',q:turns[0].t,status:'new'};db.asks.unshift(a)}
   a.turns=turns.slice(-24);a.updated=now();const la=lastAns(false)||{};Object.assign(a,{summary:la.summary||'',steps:la.steps||[],safety:la.safety||[],confidence:la.confidence||'medium'});
   db.asks=db.asks.slice(0,250);save()}
 async function askSend(){const qe=document.getElementById('ak_q'),q=qe.value.trim();if(!q)return alert(t('askPh'));
-  const st=stInfo(askSt),clr=MODE==='director'||!st||canUse(ME(),st.location),hist=histPayload(),newImg=askImgTurn===askThread.length&&!!askImg;
-  askThread.push({r:'u',t:q,img:newImg});askQ='';askBusy=true;render();
+  const st=stInfo(askSt),clr=MODE==='director'||!st||canUse(ME(),st.location),hist=histPayload(),newImg=askNewImgs;
+  askThread.push({r:'u',t:q,img:newImg});askNewImgs=0;askQ='';askBusy=true;render();
   try{let res;
     if(!db.relay){await new Promise(r=>setTimeout(r,700));res=DEMO_ANS()}
-    else{const r=await fetch(db.relay,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:await cloudToken(),key:db.relayKey||'',user:WHO(),lang,question:q,image:askImg?askImg.split(',')[1]:'',station:st,knowledge:kbFor(st),cleared:clr,history:hist})});
+    else{const r=await fetch(db.relay,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:await cloudToken(),key:db.relayKey||'',user:WHO(),lang,question:q,images:askImgs.map(d=>d.split(',')[1]),station:st,knowledge:kbFor(st),cleared:clr,history:hist})});
       const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||('HTTP '+r.status));res=j.answer||j}
     res.steps=(res.steps||[]).filter(s=>s&&s.text);askThread.push({r:'a',a:res});askStore(st)}
   catch(e){askThread.push({r:'a',a:{summary:t('askErr')+': '+(e.message||e),steps:[],safety:[],confidence:'low'}})}

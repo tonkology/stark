@@ -39,5 +39,16 @@ const fake = reply => async (url, opt) => {
   out = await handleAsk({ question: 'q', cleared: false }, { apiKey: 'k', fetchImpl: fake(sup) });
   assert.ok(fake.last.messages[0].content[0].text.includes('ROLE: member'));
   assert.equal(fake.last.max_tokens, 4096);
+  // several photos: numbered, markers keep their photo, out-of-range photo numbers fall back to 1
+  const multi = '{"summary":"s","steps":[{"text":"back terminal","img":2,"x":0.5,"y":0.5},{"text":"bad","img":9,"x":0.1,"y":0.1},{"text":"none"}],"more_photos":["inside the cabinet","a","b","c"],"confidence":"medium"}';
+  out = await handleAsk({ question: 'q', images: ['AAAA', 'BBBB'], cleared: true }, { apiKey: 'k', fetchImpl: fake(multi) });
+  const c = fake.last.messages[0].content;
+  assert.deepEqual(c.map(x => x.type), ['text', 'image', 'text', 'image', 'text']);
+  assert.equal(c[2].text, 'Photo 2:'); assert.ok(c[4].text.includes('PHOTOS: 2'));
+  assert.equal(out.answer.steps[0].img, 2); assert.equal(out.answer.steps[1].img, 1); assert.equal(out.answer.steps[2].img, undefined);
+  assert.equal(out.answer.more_photos.length, 3);
+  out = await handleAsk({ question: 'q', images: ['A', 'B', 'C', 'D', 'E', 'F'] }, { apiKey: 'k', fetchImpl: fake(multi) }); assert.equal(out.status, 413);
+  out = await handleAsk({ question: 'q', image: 'AAAA' }, { apiKey: 'k', fetchImpl: fake(good) });
+  assert.equal(fake.last.messages[0].content[0].type, 'image', 'old single-photo clients still work');
   console.log('relay logic: all checks passed');
 })().catch(e => { console.error(e); process.exit(1); });
