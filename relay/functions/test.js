@@ -27,5 +27,17 @@ const fake = reply => async (url, opt) => {
   assert.deepEqual(hr.messages.map(m => m.role), ['user', 'assistant', 'user'], 'history alternates and ends before the new question');
   assert.equal(hr.messages[2].content[0].type, 'image');
   assert.ok(hr.messages[2].content[1].text.includes('QUESTION: and then?'));
+  // a reply cut off by max_tokens is repaired, keeping the steps that arrived
+  const cut = '{"summary":"هذه محطة FESTO","safety":["افصل الكهرباء"],"steps":[{"text":"شغّل القاطع","x":0.09,"y":0.4},{"text":"اطلب من المشرف مراجعة أسلاك التوصيل الحمراء والزرقاء بين القاطع وال';
+  out = await handleAsk({ question: 'q', cleared: true }, { apiKey: 'k', fetchImpl: fake(cut) });
+  assert.equal(out.answer.summary, 'هذه محطة FESTO'); assert.equal(out.answer.steps[0].x, 0.09); assert.equal(out.answer.steps.length, 2);
+  // the director is never sent to a supervisor, even if the client says not cleared
+  const sup = '{"summary":"s","steps":[{"text":"a"}],"confidence":"medium","needs_supervisor":true}';
+  out = await handleAsk({ question: 'q', cleared: false, role: 'director' }, { apiKey: 'k', fetchImpl: fake(sup) });
+  assert.equal(out.answer.needs_supervisor, false);
+  assert.ok(fake.last.messages[0].content[0].text.includes('ROLE: director') && fake.last.messages[0].content[0].text.includes('CLEARED: true'));
+  out = await handleAsk({ question: 'q', cleared: false }, { apiKey: 'k', fetchImpl: fake(sup) });
+  assert.ok(fake.last.messages[0].content[0].text.includes('ROLE: member'));
+  assert.equal(fake.last.max_tokens, 4096);
   console.log('relay logic: all checks passed');
 })().catch(e => { console.error(e); process.exit(1); });

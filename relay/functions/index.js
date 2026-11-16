@@ -38,7 +38,7 @@ exports.askStark = onRequest(
   async (req, res) => {
     if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
     const body = req.body || {};
-    let user;
+    let user, role = 'member';
     if (body.idToken) {
       // Signed in with Google on the STARK platform: verify the token and check team membership.
       try {
@@ -50,6 +50,7 @@ exports.askStark = onRequest(
         const mem = isOwner ? null : await fs.doc('members/' + email).get();
         if (!isOwner && !(mem && mem.exists)) return res.status(403).json({ error: 'Your account is not on the team' });
         user = 'uid_' + tok.uid;
+        role = isOwner || (mem && mem.data().role === 'director') ? 'director' : 'member';
       } catch (e) {
         return res.status(401).json({ error: 'Please sign in again' });
       }
@@ -60,7 +61,7 @@ exports.askStark = onRequest(
     if (!(await bump('team', TEAM_PER_DAY))) return res.status(429).json({ error: 'Daily limit for the team reached' });
     if (!(await bump('u_' + user, PER_USER_PER_DAY))) return res.status(429).json({ error: 'Your daily limit is reached. Try again tomorrow.' });
     try {
-      const out = await handleAsk(body, { apiKey: ANTHROPIC_API_KEY.value() });
+      const out = await handleAsk({ ...body, role }, { apiKey: ANTHROPIC_API_KEY.value() });
       if (out.error) return res.status(out.status).json({ error: out.error });
       return res.json({ answer: out.answer });
     } catch (e) {

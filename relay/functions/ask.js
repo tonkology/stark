@@ -7,13 +7,13 @@ const SYSTEM = `You are "Ask STARK", the lab assistant for the industrial automa
 A student sends a photo of equipment and a question. Help them the way a careful senior lab engineer would.
 
 Rules:
-1. Use the VERIFIED KNOWLEDGE block first. If it answers the question, follow it and do not contradict it. Use the photo to locate things.
-2. Only describe what you can actually see or what the verified knowledge states. Never invent part numbers, voltages, addresses or port names. If you cannot tell, say so and set confidence to "low".
-3. Safety comes first. If any step involves mains voltage (230 V), compressed air, moving axes, robots or opening a cabinet, put the safety items in "safety" before the steps.
-4. If CLEARED is false, do NOT give steps that energise, start or move the equipment. Explain what the parts are, tell the student to get a supervisor, and set "needs_supervisor" to true.
-5. Set "needs_supervisor" to true whenever the task involves mains wiring, bypassing an interlock or emergency stop, or anything you are unsure about.
-6. Keep it short: at most 8 steps, each one plain sentence a second-year engineering student can follow.
-7. For each step that points at something visible in the photo, give "x" and "y": the position of that thing as fractions of the image width and height (0 to 1, origin at the top-left). Leave x and y out when the step is not about a visible spot, or when there is no photo.
+1. Use the VERIFIED KNOWLEDGE block first. If it answers the question, follow it and do not contradict it.
+2. If there is no verified knowledge, still answer from what you see in the photo and your general knowledge of FESTO MPS stations, Siemens S7-300/S7-1200 PLCs, MICROMASTER/SINAMICS drives, pneumatics and sensors. That is expected, not a reason to refuse. Set confidence to "medium" or "low" and say briefly what you could not confirm. Never invent part numbers, voltages, addresses or port names you cannot read.
+3. Safety first, but short and specific to THIS task: at most 3 safety items, no generic warnings.
+4. ROLE "director" is the lab director, an experienced engineer and the supervisor. Answer him directly and technically, with concrete steps, including how to power up and run the equipment. Never tell him to ask a supervisor, and set "needs_supervisor" to false.
+5. For ROLE "member" (a student): if CLEARED is false, do NOT give steps that energise, start or move the equipment; explain what the parts are and set "needs_supervisor" to true. If CLEARED is true, give the steps. Set "needs_supervisor" to true only for rewiring mains, bypassing an interlock or emergency stop, or when you really cannot tell what is safe.
+6. Keep it short: summary at most 2 sentences, at most 8 steps, each step one plain sentence of at most 25 words.
+7. When a photo is attached, give "x" and "y" for EVERY step that refers to something visible in it: the centre of that thing as fractions of the image width and height (0 to 1, origin top-left). Look carefully so the point lands on the part. Leave x and y out only for steps about nothing visible.
 8. This can be a conversation. Earlier assistant turns are your own previous replies; answer the LATEST question in that context and do not repeat earlier steps unless asked. A short follow-up may need only a "summary" and no steps. The photo attached to the latest message is the current photo; x/y always refer to it.
 9. Reply in the language given in LANG ("ar" = Arabic in a clear, simple register; "en" = English). Keep technical labels as printed on the equipment.
 
@@ -45,7 +45,8 @@ function buildRequest(body) {
   const kb = Array.isArray(body.knowledge) ? body.knowledge.slice(0, 3) : [];
   const text = [
     `LANG: ${body.lang === 'ar' ? 'ar' : 'en'}`,
-    `CLEARED: ${body.cleared ? 'true' : 'false'}`,
+    `ROLE: ${body.role === 'director' ? 'director' : 'member'}`,
+    `CLEARED: ${body.cleared || body.role === 'director' ? 'true' : 'false'}`,
     st ? `STATION: ${clip(st.id, 40)} | ${clip(st.name, 120)} | ${clip(st.category, 60)} | ${clip(st.location, 120)}` : 'STATION: not specified',
     st && st.notes ? `STATION NOTES: ${clip(st.notes, 800)}` : '',
     kb.length ? 'VERIFIED KNOWLEDGE:\n' + kb.map((d, i) => `[${i + 1}] ${clip(d.title, 160)}\n${clip(d.body, 1800)}`).join('\n\n') : 'VERIFIED KNOWLEDGE: none for this station',
@@ -55,10 +56,28 @@ function buildRequest(body) {
   if (body.image) content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: body.image } });
   content.push({ type: 'text', text });
   const history = cleanHistory(body.history);
-  return { model: MODEL, max_tokens: 1500, system: SYSTEM, messages: [...history, { role: 'user', content }] };
+  return { model: MODEL, max_tokens: 4096, system: SYSTEM, messages: [...history, { role: 'user', content }] };
 }
 
-function sanitize(raw, cleared) {
+// Parse the model's JSON; if the reply was cut off, close open strings/brackets and try again.
+function parseReply(txt) {
+  const a = txt.indexOf('{');
+  if (a < 0) return null;
+  const b = txt.lastIndexOf('}');
+  if (b > a) { try { return JSON.parse(txt.slice(a, b + 1)); } catch (e) { /* repair below */ } }
+  let src = txt.slice(a), out = '', stack = [], inStr = false, esc = false;
+  for (const ch of src) {
+    out += ch;
+    if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true; else if (ch === '{' || ch === '[') stack.push(ch); else if (ch === '}' || ch === ']') stack.pop();
+  }
+  if (inStr) out += '"';
+  out = out.replace(/,\s*$/, '').replace(/,\s*"[^"]*"\s*:?\s*$/, '').replace(/:\s*$/, ': null');
+  while (stack.length) out += stack.pop() === '{' ? '}' : ']';
+  try { return JSON.parse(out); } catch (e) { return null; }
+}
+
+function sanitize(raw, cleared, role) {
   const num = v => (typeof v === 'number' && isFinite(v) ? Math.min(1, Math.max(0, v)) : undefined);
   const steps = (Array.isArray(raw.steps) ? raw.steps : []).slice(0, 8).map(s => {
     const o = { text: clip(s && s.text, 400) };
@@ -72,7 +91,7 @@ function sanitize(raw, cleared) {
     safety: (Array.isArray(raw.safety) ? raw.safety : []).slice(0, 6).map(s => clip(s, 300)).filter(Boolean),
     steps,
     confidence: conf,
-    needs_supervisor: !cleared || !!raw.needs_supervisor,
+    needs_supervisor: role === 'director' ? false : (!cleared || !!raw.needs_supervisor),
   };
 }
 
@@ -87,10 +106,9 @@ async function handleAsk(body, { apiKey, fetchImpl = fetch }) {
   const data = await r.json().catch(() => ({}));
   if (!r.ok) return { status: 502, error: 'Assistant error: ' + clip(data && data.error && data.error.message, 200) };
   const txt = (data.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
-  const a = txt.indexOf('{'), b = txt.lastIndexOf('}');
-  let raw;
-  try { raw = JSON.parse(txt.slice(a, b + 1)); } catch (e) { raw = { summary: txt, steps: [], safety: [], confidence: 'low' }; }
-  return { status: 200, answer: sanitize(raw, !!body.cleared) };
+  const raw = parseReply(txt) || { summary: txt.replace(/[{}\[\]"]/g, ' ').slice(0, 900), steps: [], safety: [], confidence: 'low' };
+  if (data.stop_reason === 'max_tokens') console.warn('askStark: reply hit max_tokens and was repaired');
+  return { status: 200, answer: sanitize(raw, !!body.cleared || body.role === 'director', body.role) };
 }
 
-module.exports = { handleAsk, buildRequest, sanitize, cleanHistory, MODEL };
+module.exports = { handleAsk, buildRequest, sanitize, cleanHistory, parseReply, MODEL };
