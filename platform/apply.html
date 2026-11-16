@@ -78,10 +78,10 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function rng(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const now=()=>Date.now();
-function left(){return Math.max(0,LIMIT-Math.floor((now()-S.t0)/1000))}
+function left(){return S.practice?99999:Math.max(0,LIMIT-Math.floor((now()-S.t0)/1000))}
 function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
 let tick=null;
-function startClock(){clearInterval(tick);tick=setInterval(()=>{if(!S||S.done)return;const l=left();$('pTime').textContent=fmt(l);$('pTime').classList.toggle('low',l<180);if(l<=0){finishRoom(false,true)}},500)}
+function startClock(){clearInterval(tick);tick=setInterval(()=>{if(!S||S.done||S.practice||S.idle)return;const l=left();$('pTime').textContent=fmt(l);$('pTime').classList.toggle('low',l<180);if(l<=0){finishRoom(false,true)}},500)}
 
 /* ---------------- intro + form ---------------- */
 function intro(){
@@ -106,19 +106,25 @@ function intro(){
     <div><label class="f" for="f_uni">University or college</label><input id="f_uni" maxlength="80" placeholder="e.g. King Abdulaziz University"></div>
     <div><label class="f" for="f_major">Major</label><input id="f_major" maxlength="80" placeholder="e.g. Mechanical Engineering"></div>
     <div><label class="f" for="f_year">Year of study</label><select id="f_year"><option value="">Choose</option><option>2nd year</option><option>3rd year</option><option>4th year</option><option>5th year</option><option>Graduate</option><option>Other</option></select></div>
-    <div><label class="f" for="f_prog">Applying for</label><select id="f_prog"><option value="">Choose</option><option value="coop-next">Co-op, starting next semester (6 months)</option><option value="summer">Summer internship</option><option value="coop-summer">Co-op, starting in summer (6 months)</option></select></div>
+    <div><label class="f" for="f_prog">Applying for</label><select id="f_prog"><option value="">Choose</option><option value="coop-next">Co-op, starting next semester (6 months)</option><option value="summer">Summer internship</option><option value="coop-summer">Co-op, starting in summer (6 months)</option><option value="club">Join the STARK club (no test needed)</option></select></div>
     <div><label class="f" for="f_track">Area you want to work in</label><select id="f_track"><option value="">Choose</option><option value="automation">Automation and PLCs</option><option value="robotics">Robotics software</option><option value="mechanical">Mechanical design and prototyping</option><option value="twin">Digital twin and software</option><option value="unsure">Not sure yet</option></select></div>
    </div>
    <label class="row" style="margin-top:14px;font-size:13px;color:var(--mut);align-items:flex-start"><input type="checkbox" id="f_ok" style="width:auto;margin-top:3px"> <span style="flex:1">I will solve this on my own, and I agree that STARK stores these details and my results to select candidates.</span></label>
    <div class="msg no" id="f_msg"></div>
-   <div class="row" style="margin-top:14px"><button class="btn" id="go">Start the 30 minutes</button><span style="font-size:13px;color:var(--mut)">Best on a laptop. A phone works too.</span></div>
+   <div class="msg info" id="f_club">Club members do not take the timed test. You sign up now, and you can try the five rooms afterwards for fun, with no clock and as many times as you like. Before working in the lab you attend a short safety induction.</div>
+   <div class="row" style="margin-top:14px"><button class="btn" id="go">Start the 30 minutes</button><span style="font-size:13px;color:var(--mut)" id="f_tip">Best on a laptop. A phone works too.</span></div>
   </div>`;
+  const sync=()=>{const c=$('f_prog').value==='club';$('f_club').classList.toggle('show',c);$('go').textContent=c?'Join the club':'Start the 30 minutes';$('f_tip').hidden=c};
+  if(/club/i.test(location.search)){$('f_prog').value='club'}
+  if(/club/i.test(location.search)){app.querySelector('h1').innerHTML='Join the <em>STARK club.</em>';app.querySelector('.lead').textContent='Sign up below. No test and no CV. If you want to apply for a co-op or summer internship instead, change "Applying for" and the rules in the next box apply.'}
+  $('f_prog').onchange=sync;sync();
   $('go').onclick=()=>{const v=k=>$(k).value.trim();const e=v('f_email').toLowerCase();const m=$('f_msg');
     const bad=t=>{m.textContent=t;m.classList.add('show')};
     if(v('f_name').length<3)return bad('Enter your full name.');
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))return bad('Enter a valid email.');
     if(!v('f_uni')||!v('f_major')||!v('f_year')||!v('f_prog')||!v('f_track'))return bad('Fill in every field (mobile is optional).');
     if(!$('f_ok').checked)return bad('Tick the box to continue.');
+    if(v('f_prog')==='club')return joinClub({name:v('f_name'),email:e,phone:v('f_phone'),uni:v('f_uni'),major:v('f_major'),year:v('f_year'),prog:'club',track:v('f_track')});
     S={who:{name:v('f_name'),email:e,phone:v('f_phone'),uni:v('f_uni'),major:v('f_major'),year:v('f_year'),prog:v('f_prog'),track:v('f_track')},seed:(Math.random()*2**31)|0,t0:now(),room:0,res:[],done:false,sent:false};
     save();startClock();enter()};
 }
@@ -126,7 +132,7 @@ function intro(){
 /* ---------------- room frame ---------------- */
 let R=null; // live room state
 function frame(title,brief,body){const r=ROOMS[S.room];
-  $('pTime').hidden=false;$('pRoom').hidden=false;$('pRoom').textContent=`Room ${S.room+1}/5`;
+  $('pTime').hidden=!!S.practice;$('pRoom').hidden=false;$('pRoom').textContent=(S.practice?'Practice · ':'')+`Room ${S.room+1}/5`;
   app.innerHTML=`<span class="eyebrow">Room ${S.room+1} of 5 · ${r.n}</span><h2 style="margin-top:6px">${title}</h2>
    <div class="steps">${ROOMS.map((x,i)=>`<i class="${i<S.room?(S.res[i]&&S.res[i].solved?'done':'skip'):i===S.room?'cur':''}"></i>`).join('')}</div>
    <div class="brief">${brief}</div>${body}
@@ -377,24 +383,39 @@ function roomSeq(){
   R.stop=()=>{cancelAnimationFrame(anim);clearTimeout(anim)};
   draw()}
 
+/* ---------------- club ---------------- */
+async function fsdb(){const A=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');const FS=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+  let ap;try{ap=A.getApp('apply')}catch(e){ap=A.initializeApp(window.STARK_FB,'apply')}return{FS,fs:FS.getFirestore(ap)}}
+async function joinClub(who){const b=$('go'),m=$('f_msg');b.disabled=true;b.textContent='Joining…';m.classList.remove('show');
+  try{const {FS,fs}=await fsdb();await FS.setDoc(FS.doc(fs,'club',docId(who.email)),{name:who.name.slice(0,80),email:who.email.slice(0,120),phone:who.phone.slice(0,20),uni:who.uni.slice(0,80),major:who.major.slice(0,80),year:who.year,track:who.track,at:now(),v:1})}
+  catch(e){if(!/permission/i.test(String(e&&(e.code||e.message)))){b.disabled=false;b.textContent='Join the club';m.textContent='Could not sign you up (connection problem). Try again.';m.classList.add('show');return}} // "permission" here means this email is already a member
+  S={who,club:true,idle:true,practice:true,room:0,res:[],done:false};save();clubHome()}
+function clubHome(){$('pTime').hidden=true;$('pRoom').hidden=true;
+  app.innerHTML=`<span class="eyebrow">STARK club</span><h1>You are <em>in.</em></h1>
+   <p class="lead">Welcome, ${esc(S.who.name)}. We will email you about the next club session and the safety induction.</p>
+   <div class="card"><h2>Want a challenge?</h2><p style="color:var(--mut);margin:6px 0 12px">Five rooms, five small engineering puzzles. No clock, no pressure, play as often as you like. Members who do well and keep showing up are the first we invite to internships.</p>
+   <button class="btn" id="play">Play Restart the Line</button></div>`;
+  $('play').onclick=startPractice;window.scrollTo(0,0)}
+function startPractice(){Object.assign(S,{seed:(Math.random()*2**31)|0,t0:now(),room:0,res:[],done:false,idle:false,practice:true,sent:false});delete S.t1;save();enter()}
+
 /* ---------------- results + submit ---------------- */
 function docId(e){return e.replace(/[^a-z0-9._@-]/g,'_').slice(0,120)}
 async function submit(){
   const total=S.res.reduce((a,r)=>a+r.score,0);
   const doc={name:S.who.name.slice(0,80),email:S.who.email.slice(0,120),phone:S.who.phone.slice(0,20),uni:S.who.uni.slice(0,80),major:S.who.major.slice(0,80),year:S.who.year,prog:S.who.prog,track:S.who.track,
     total,rooms:S.res.map(r=>({k:r.k,solved:r.solved,score:r.score,secs:r.secs,wrong:r.wrong,hints:r.hints})),secs:Math.round(((S.t1||now())-S.t0)/1000),at:now(),ua:navigator.userAgent.slice(0,160),v:1};
-  const A=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
-  const FS=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
-  const fs=FS.getFirestore(A.initializeApp(window.STARK_FB,'apply'));
+  const {FS,fs}=await fsdb();
+  if(S.practice){await FS.addDoc(FS.collection(fs,'club_runs'),{name:doc.name,email:doc.email,total,rooms:doc.rooms,secs:doc.secs,at:doc.at,v:1});return}
   await FS.setDoc(FS.doc(fs,'applicants',docId(S.who.email)),doc)}
 function results(){clearInterval(tick);$('pTime').hidden=true;$('pRoom').hidden=true;
   const total=S.res.reduce((a,r)=>a+r.score,0);
   app.innerHTML=`<span class="eyebrow">Finished</span><h1>${total>=350?'The line is <em>running.</em>':total>=200?'Most of the line is <em>back.</em>':'You gave it a <em>try.</em>'}</h1>
-   <p class="lead">${esc(S.who.name)}, your result is ${total} out of 500.</p>
+   <p class="lead">${esc(S.who.name)}, your ${S.practice?'practice ':''}result is ${total} out of 500.</p>
    <div class="res">${S.res.map((r,i)=>`<div><b>${r.score}</b><span>${ROOMS[i].n}${r.solved?'':' · not solved'}</span></div>`).join('')}</div>
    <div class="card"><div id="sub" class="msg info show">Sending your result…</div>
-   <p style="color:var(--mut);margin:12px 0 0">The score is one part of the decision. We also look at how you worked through each room. Shortlisted candidates are invited to a second round in the lab.</p></div>`;
-  const ok=()=>{S.sent=true;save();$('sub').className='msg ok show';$('sub').textContent='Your application is in. We will contact you by email.'};
+   ${S.practice?'<p style="color:var(--mut);margin:12px 0 12px">This was a practice run, so it has no effect on your club membership. The puzzles change every time.</p><button class="btn" id="replay">Play again</button>':'<p style="color:var(--mut);margin:12px 0 0">The score is one part of the decision. We also look at how you worked through each room. Shortlisted candidates are invited to a second round in the lab.</p>'}</div>`;
+  if($('replay'))$('replay').onclick=startPractice;
+  const ok=()=>{S.sent=true;save();$('sub').className='msg ok show';$('sub').textContent=S.practice?'Practice result saved.':'Your application is in. We will contact you by email.'};
   const fail=e=>{const dup=/permission|PERMISSION/.test(String(e&&(e.code||e.message)));$('sub').className='msg no show';
     $('sub').innerHTML=dup?'An application with this email already exists, so this one was not saved.':'Could not send your result (connection problem). <button class="btn sm" id="again" style="margin-left:8px">Try again</button>';
     if($('again'))$('again').onclick=()=>{$('sub').className='msg info show';$('sub').textContent='Sending your result…';submit().then(ok,fail)}};
@@ -402,7 +423,7 @@ function results(){clearInterval(tick);$('pTime').hidden=true;$('pRoom').hidden=
 
 /* ---------------- boot ---------------- */
 load();
-if(S&&S.t0){startClock();if(S.done)results();else enter()}else intro();
+if(S&&S.club&&S.idle)clubHome();else if(S&&S.t0){startClock();if(S.done)results();else enter()}else intro();
 </script>
 </body>
 </html>

@@ -35,7 +35,7 @@ button{cursor:pointer}button.go{background:var(--gold);color:#2A1607;border-colo
 </style>
 </head>
 <body>
-<header><div class="brand">STARK</div><b>Applicants · Restart the Line</b><span style="flex:1"></span><a href="/director">Director console</a><a href="/apply" target="_blank">Open the test</a></header>
+<header><div class="brand">STARK</div><b>Applicants and club</b><span style="flex:1"></span><a href="/director">Director console</a><a href="/apply" target="_blank">Open the test</a></header>
 <main id="app"><div class="note">Loading…</div></main>
 <script src="/firebase-config.js"></script>
 <script type="module">
@@ -48,12 +48,29 @@ const W={automation:[1,3],robotics:[4,1],mechanical:[2,0],twin:[4,3],unsure:[]};
 const TR={automation:'Automation and PLCs',robotics:'Robotics software',mechanical:'Mechanical design',twin:'Digital twin and software',unsure:'Not sure yet'};
 const PR={'coop-next':'Co-op · next semester','summer':'Summer internship','coop-summer':'Co-op · summer start'};
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let rows=[],fProg='',fTrack='',weighted=true;
+let rows=[],club=[],runs=[],mode='app',fProg='',fTrack='',weighted=true;
 const fit=r=>{const w=W[r.track]||[];let s=0,m=0;(r.rooms||[]).forEach((x,i)=>{const k=w.includes(i)?2:1;s+=x.score*k;m+=100*k});return m?Math.round(s/m*100):0};
+const tabs=()=>`<div class="row" style="margin-bottom:12px"><button class="${mode==='app'?'go':''}" id="tA">Applicants (${rows.length})</button><button class="${mode==='club'?'go':''}" id="tC">Club (${club.length})</button></div>`;
+const wire=()=>{document.getElementById('tA').onclick=()=>{mode='app';view()};document.getElementById('tC').onclick=()=>{mode='club';view()}};
+function clubView(){
+  const by={};runs.forEach(r=>{const k=(r.email||'').toLowerCase();(by[k]=by[k]||[]).push(r)});
+  const list=club.map(m=>{const rs=by[(m.email||'').toLowerCase()]||[];const best=rs.reduce((a,r)=>!a||r.total>a.total?r:a,null);return{...m,n:rs.length,best}}).sort((a,b)=>(b.best?b.best.total:-1)-(a.best?a.best.total:-1)||b.at-a.at);
+  app.innerHTML=tabs()+`<div class="stats"><div class="stat"><b>${club.length}</b><span>club members</span></div><div class="stat"><b>${list.filter(m=>m.n).length}</b><span>tried the challenge</span></div><div class="stat"><b>${runs.length}</b><span>practice runs</span></div><div class="stat"><b>${list.filter(m=>m.best&&m.best.total>=350).length}</b><span>scored 350 or more</span></div></div>
+  <div class="row"><span style="flex:1"></span><button id="csv">Copy as CSV</button></div>
+  ${list.length?list.map((m,i)=>`<div class="c"><div class="top"><span class="rank">#${i+1}</span><div class="nm"><b>${esc(m.name)}</b><div>${esc(m.major)} · ${esc(m.year)} · ${esc(m.uni)}</div></div>
+    <div class="sc"><b>${m.best?m.best.total:'—'}</b><span>${m.n?`best of ${m.n} run${m.n>1?'s':''}`:'has not played'}</span></div></div>
+    ${m.best?`<div class="bars">${m.best.rooms.map((x,k)=>`<div class="bar ${x.solved?'':'z'}"><i style="width:${x.solved?x.score:100}%"></i><span>${ROOMS[k].slice(0,5)} ${x.solved?x.score:'✕'}</span></div>`).join('')}</div>`:''}
+    <div class="meta"><span>${esc(TR[m.track]||m.track)}</span><span class="mono">${esc(m.email)}</span>${m.phone?`<span class="mono">${esc(m.phone)}</span>`:''}<span>joined ${new Date(m.at).toLocaleDateString()}</span></div></div>`).join(''):'<div class="note">No club members yet. Share the link: stark-91dfe.web.app/apply?club</div>'}
+  <p style="color:var(--mut);font-size:12px;margin-top:16px">Practice runs are optional and untimed, and members can replay them, so read these scores as interest and effort, not as a ranking.</p>`;
+  wire();
+  document.getElementById('csv').onclick=async e=>{const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+    const txt=['name,email,phone,university,major,year,area,best,runs,joined'].concat(list.map(m=>[m.name,m.email,m.phone,m.uni,m.major,m.year,TR[m.track]||m.track,m.best?m.best.total:'',m.n,new Date(m.at).toISOString().slice(0,10)].map(q).join(','))).join('\n');
+    try{await navigator.clipboard.writeText(txt);e.target.textContent='Copied'}catch(_){e.target.textContent='Copy failed'}setTimeout(()=>e.target.textContent='Copy as CSV',1600)}}
 function view(){
+  if(mode==='club')return clubView();
   const list=rows.filter(r=>(!fProg||r.prog===fProg)&&(!fTrack||r.track===fTrack)).map(r=>({...r,fit:fit(r)})).sort((a,b)=>weighted?b.fit-a.fit||b.total-a.total:b.total-a.total);
   const n=rows.length,avg=n?Math.round(rows.reduce((a,r)=>a+r.total,0)/n):0;
-  app.innerHTML=`<div class="stats"><div class="stat"><b>${n}</b><span>applications</span></div><div class="stat"><b>${avg}</b><span>average score / 500</span></div><div class="stat"><b>${rows.filter(r=>r.status==='short').length}</b><span>shortlisted</span></div><div class="stat"><b>${rows.filter(r=>r.total>=350).length}</b><span>scored 350 or more</span></div></div>
+  app.innerHTML=tabs()+`<div class="stats"><div class="stat"><b>${n}</b><span>applications</span></div><div class="stat"><b>${avg}</b><span>average score / 500</span></div><div class="stat"><b>${rows.filter(r=>r.status==='short').length}</b><span>shortlisted</span></div><div class="stat"><b>${rows.filter(r=>r.total>=350).length}</b><span>scored 350 or more</span></div></div>
   <div class="row"><select id="fp"><option value="">All programs</option>${Object.entries(PR).map(([k,v])=>`<option value="${k}" ${fProg===k?'selected':''}>${v}</option>`).join('')}</select>
    <select id="ft"><option value="">All areas</option>${Object.entries(TR).map(([k,v])=>`<option value="${k}" ${fTrack===k?'selected':''}>${v}</option>`).join('')}</select>
    <select id="fw"><option value="1" ${weighted?'selected':''}>Rank by fit for their area</option><option value="0" ${weighted?'':'selected'}>Rank by raw score</option></select>
@@ -66,7 +83,7 @@ function view(){
     <div class="meta"><span>${esc(PR[r.prog]||r.prog)}</span><span>${esc(TR[r.track]||r.track)}</span><span class="mono">${esc(r.email)}</span>${r.phone?`<span class="mono">${esc(r.phone)}</span>`:''}<span>${Math.round((r.secs||0)/60)} min · ${new Date(r.at).toLocaleDateString()}</span>
      <span style="flex:1"></span><button data-s="short" data-id="${esc(r.id)}">${r.status==='short'?'Unshortlist':'Shortlist'}</button><button data-s="rej" data-id="${esc(r.id)}">${r.status==='rej'?'Restore':'Not selected'}</button></div></div>`}).join(''):'<div class="note">No applications yet. Share the link: stark-91dfe.web.app/apply</div>'}
   <p style="color:var(--mut);font-size:12px;margin-top:16px">Green bars are the rooms that count double for that applicant's area. ✕ after a number is wrong tries. Scores are computed in the applicant's browser, so confirm the shortlist in the lab round.</p>`;
-  document.getElementById('fp').onchange=e=>{fProg=e.target.value;view()};document.getElementById('ft').onchange=e=>{fTrack=e.target.value;view()};document.getElementById('fw').onchange=e=>{weighted=e.target.value==='1';view()};
+  wire();document.getElementById('fp').onchange=e=>{fProg=e.target.value;view()};document.getElementById('ft').onchange=e=>{fTrack=e.target.value;view()};document.getElementById('fw').onchange=e=>{weighted=e.target.value==='1';view()};
   app.querySelectorAll('[data-s]').forEach(b=>b.onclick=async()=>{const r=rows.find(x=>x.id===b.dataset.id),s=r.status===b.dataset.s?'':b.dataset.s;b.disabled=true;
     try{await FS.updateDoc(FS.doc(fs,'applicants',r.id),{status:s});r.status=s}catch(e){alert('Could not save: '+e.message)}view()});
   document.getElementById('csv').onclick=async e=>{const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
@@ -74,7 +91,7 @@ function view(){
     try{await navigator.clipboard.writeText(txt);e.target.textContent='Copied'}catch(_){e.target.textContent='Copy failed'}setTimeout(()=>e.target.textContent='Copy as CSV',1600)};
 }
 async function loadAll(){app.innerHTML='<div class="note">Loading applications…</div>';
-  try{const snap=await FS.getDocs(FS.collection(fs,'applicants'));rows=snap.docs.map(d=>({id:d.id,...d.data()}));view()}
+  try{const [a,c,r]=await Promise.all(['applicants','club','club_runs'].map(n=>FS.getDocs(FS.collection(fs,n))));const m=x=>x.docs.map(d=>({id:d.id,...d.data()}));rows=m(a);club=m(c);runs=m(r);view()}
   catch(e){app.innerHTML=`<div class="note">This page is for the director only.<br><span class="mono">${esc(e.code||e.message)}</span><br><br><button id="so">Sign out</button></div>`;document.getElementById('so').onclick=()=>AU.signOut(auth)}}
 AU.onAuthStateChanged(auth,u=>{if(u)loadAll();else{app.innerHTML='<div class="note">Sign in with the director account.<br><br><button class="go" id="si">Sign in with Google</button></div>';
   document.getElementById('si').onclick=()=>AU.signInWithPopup(auth,new AU.GoogleAuthProvider()).catch(e=>alert(e.message))}});
