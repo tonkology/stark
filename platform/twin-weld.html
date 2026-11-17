@@ -133,6 +133,24 @@ select,input[type=number]{background:var(--panel2);border:1px solid var(--line);
 </style>
 </head>
 <body>
+<div id="gate" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#07130D;color:#F2F7ED;font:15px/1.6 'Alexandria',Tahoma,Arial,sans-serif;padding:16px">
+<form id="gateF" style="width:100%;max-width:340px;background:#0B1E15;border:1px solid #1F4430;border-radius:16px;padding:24px;text-align:center" autocomplete="off">
+<div style="font-weight:800;font-size:18px;direction:ltr"><span style="color:#86C242">SMART</span> Lab</div>
+<p style="margin:8px 0 16px;color:#A7C2B2">أدخل رمز الدخول · Enter the access code</p>
+<input id="gateI" type="password" autocapitalize="off" style="width:100%;box-sizing:border-box;font-size:16px;padding:12px;border-radius:10px;border:1px solid #1F4430;background:#07130D;color:#F2F7ED;text-align:center" aria-label="Access code">
+<button style="margin-top:12px;width:100%;font-weight:700;font-size:15px;font-family:inherit;padding:12px;border:0;border-radius:10px;background:#86C242;color:#07130D;cursor:pointer">دخول · Enter</button>
+<p id="gateE" style="margin:10px 0 0;color:#EC7A72;min-height:1.6em"></p>
+</form></div>
+<script>
+(function(){var H="5e917cde28aac94a1a17535db4ad9ec87f5676bdc02d82af28c3f1c04514600a",K="smartlab-pass";
+function open(){var g=document.getElementById("gate");if(g)g.remove();window.__gateOpen=true;document.dispatchEvent(new Event("gate-open"))}
+try{if(localStorage.getItem(K)===H){open();return}}catch(e){}
+async function sha(s){var b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,"0")}).join("")}
+document.getElementById("gateF").addEventListener("submit",async function(e){e.preventDefault();var v=document.getElementById("gateI").value.trim().toLowerCase();
+ if(await sha(v)===H){try{localStorage.setItem(K,H)}catch(e){}open()}else{document.getElementById("gateE").textContent="الرمز غير صحيح · Wrong code"}});
+setTimeout(function(){var i=document.getElementById("gateI");if(i)i.focus()},50)})();
+</script>
+
 <div class="app" id="app">
 <header class="top">
   <span class="brand"><b>SMART</b> Lab</span>
