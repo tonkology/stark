@@ -39,10 +39,19 @@ service cloud.firestore {
       allow read, write: if isDirector();
     }
 
+    // Optional free-text answers on the application and club forms: absent, or short strings.
+    function optionalText(d) {
+      return d.get('gpa','') is string && d.get('gpa','').size() <= 12
+          && d.get('grad','') is string && d.get('grad','').size() <= 30
+          && d.get('cv','') is string && d.get('cv','').size() <= 200
+          && d.get('why','') is string && d.get('why','').size() <= 500;
+    }
+
     // Applications from the public "Restart the Line" test. Anyone may submit once per email
     // (the document id is the email, and only create is allowed); only the director reads them.
     match /applicants/{id} {
-      allow create: if request.resource.data.keys().hasOnly(['name','email','phone','uni','major','year','prog','track','total','rooms','secs','at','ua','v'])
+      allow create: if request.resource.data.keys().hasOnly(['name','email','phone','uni','major','year','prog','track','gpa','grad','cv','why','total','rooms','secs','at','ua','v'])
+                    && optionalText(request.resource.data)
                     && request.resource.data.name is string && request.resource.data.name.size() <= 80
                     && request.resource.data.email is string && request.resource.data.email.size() <= 120
                     && request.resource.data.uni is string && request.resource.data.uni.size() <= 80
@@ -55,7 +64,8 @@ service cloud.firestore {
 
     // Club sign-ups (one per email) and optional practice runs of the test. Create only; the director reads them.
     match /club/{id} {
-      allow create: if request.resource.data.keys().hasOnly(['name','email','phone','uni','major','year','track','at','v'])
+      allow create: if request.resource.data.keys().hasOnly(['name','email','phone','uni','major','year','track','gpa','grad','cv','why','at','v'])
+                    && optionalText(request.resource.data)
                     && request.resource.data.name is string && request.resource.data.name.size() <= 80
                     && request.resource.data.email is string && request.resource.data.email.size() <= 120
                     && id.size() <= 120;

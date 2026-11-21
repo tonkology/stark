@@ -32,6 +32,8 @@ button{cursor:pointer}button.go{background:var(--gold);color:#2A1607;border-colo
 .meta{font-size:12px;color:var(--mut);margin-top:8px;display:flex;gap:14px;flex-wrap:wrap}
 .tag{font:600 10.5px Inter;padding:2px 8px;border-radius:99px;background:#2a1c1e;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
 .note{color:var(--mut);padding:30px 0;text-align:center}
+.why{margin:8px 0 0;padding:8px 12px;border-inline-start:3px solid var(--line,#2a3a32);color:var(--mut,#9aa);font-size:13px;line-height:1.5;white-space:pre-wrap}
+.meta a{color:inherit;text-decoration:underline}
 </style>
 </head>
 <body>
@@ -44,8 +46,8 @@ const [A,AU,FS]=await Promise.all(['app','auth','firestore'].map(n=>import(`http
 const fb=A.initializeApp(window.STARK_FB),auth=AU.getAuth(fb),fs=FS.getFirestore(fb),app=document.getElementById('app');
 const ROOMS=['Observation','Logic','Mechanism','Diagnosis','Sequencing'];
 // rooms that count double for each area
-const W={automation:[1,3],robotics:[4,1],mechanical:[2,0],twin:[4,3],unsure:[]};
-const TR={automation:'Automation and PLCs',robotics:'Robotics software',mechanical:'Mechanical design',twin:'Digital twin and software',unsure:'Not sure yet'};
+const W={automation:[1,3],robotics:[4,1],mechanical:[2,0],twin:[4,3],process:[0,3],unsure:[]};
+const TR={automation:'Automation and PLCs',robotics:'Robotics software',mechanical:'Mechanical design',twin:'Digital twin and software',process:'Process control',unsure:'Not sure yet'};
 const PR={'coop-next':'Co-op · next semester','summer':'Summer internship','coop-summer':'Co-op · summer start'};
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let rows=[],club=[],runs=[],mode='app',fProg='',fTrack='',weighted=true;
@@ -60,11 +62,11 @@ function clubView(){
   ${list.length?list.map((m,i)=>`<div class="c"><div class="top"><span class="rank">#${i+1}</span><div class="nm"><b>${esc(m.name)}</b><div>${esc(m.major)} · ${esc(m.year)} · ${esc(m.uni)}</div></div>
     <div class="sc"><b>${m.best?m.best.total:'—'}</b><span>${m.n?`best of ${m.n} run${m.n>1?'s':''}`:'has not played'}</span></div></div>
     ${m.best?`<div class="bars">${m.best.rooms.map((x,k)=>`<div class="bar ${x.solved?'':'z'}"><i style="width:${x.solved?x.score:100}%"></i><span>${ROOMS[k].slice(0,5)} ${x.solved?x.score:'✕'}</span></div>`).join('')}</div>`:''}
-    <div class="meta"><span>${esc(TR[m.track]||m.track)}</span><span class="mono">${esc(m.email)}</span>${m.phone?`<span class="mono">${esc(m.phone)}</span>`:''}<span>joined ${new Date(m.at).toLocaleDateString()}</span></div></div>`).join(''):'<div class="note">No club members yet. Share the link: stark-91dfe.web.app/apply?club</div>'}
+    <div class="meta"><span>${esc(TR[m.track]||m.track)}</span>${m.gpa?`<span>GPA ${esc(m.gpa)}</span>`:''}${m.grad?`<span>grad ${esc(m.grad)}</span>`:''}${/^https?:\/\//i.test(m.cv||'')?`<a href="${esc(m.cv)}" target="_blank" rel="noopener noreferrer">CV / LinkedIn</a>`:''}<span class="mono">${esc(m.email)}</span>${m.phone?`<span class="mono">${esc(m.phone)}</span>`:''}<span>joined ${new Date(m.at).toLocaleDateString()}</span></div>${m.why?`<p class="why">${esc(m.why)}</p>`:''}</div>`).join(''):'<div class="note">No club members yet. Share the link: stark-91dfe.web.app/apply?club</div>'}
   <p style="color:var(--mut);font-size:12px;margin-top:16px">Practice runs are optional and untimed, and members can replay them, so read these scores as interest and effort, not as a ranking.</p>`;
   wire();
   document.getElementById('csv').onclick=async e=>{const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
-    const txt=['name,email,phone,university,major,year,area,best,runs,joined'].concat(list.map(m=>[m.name,m.email,m.phone,m.uni,m.major,m.year,TR[m.track]||m.track,m.best?m.best.total:'',m.n,new Date(m.at).toISOString().slice(0,10)].map(q).join(','))).join('\n');
+    const txt=['name,email,phone,university,major,year,gpa,graduation,cv,why,area,best,runs,joined'].concat(list.map(m=>[m.name,m.email,m.phone,m.uni,m.major,m.year,m.gpa,m.grad,m.cv,m.why,TR[m.track]||m.track,m.best?m.best.total:'',m.n,new Date(m.at).toISOString().slice(0,10)].map(q).join(','))).join('\n');
     try{await navigator.clipboard.writeText(txt);e.target.textContent='Copied'}catch(_){e.target.textContent='Copy failed'}setTimeout(()=>e.target.textContent='Copy as CSV',1600)}}
 function view(){
   if(mode==='club')return clubView();
@@ -80,14 +82,14 @@ function view(){
      <div class="nm"><b>${esc(r.name)}</b> ${r.status==='short'?'<span class="tag" style="background:#123D2A;color:#8fe3b8">shortlisted</span>':r.status==='rej'?'<span class="tag">not selected</span>':''}<div>${esc(r.major)} · ${esc(r.year)} · ${esc(r.uni)}</div></div>
      <div class="sc"><b>${r.fit}%</b><span>fit · ${r.total}/500</span></div></div>
     <div class="bars">${(r.rooms||[]).map((x,k)=>`<div class="bar ${w.includes(k)?'w':''} ${x.solved?'':'z'}" title="${ROOMS[k]}"><i style="width:${x.solved?x.score:100}%"></i><span>${ROOMS[k].slice(0,5)} ${x.solved?x.score:'✕'} · ${x.secs}s${x.wrong?' · '+x.wrong+'✕':''}${x.hints?' · hint':''}</span></div>`).join('')}</div>
-    <div class="meta"><span>${esc(PR[r.prog]||r.prog)}</span><span>${esc(TR[r.track]||r.track)}</span><span class="mono">${esc(r.email)}</span>${r.phone?`<span class="mono">${esc(r.phone)}</span>`:''}<span>${Math.round((r.secs||0)/60)} min · ${new Date(r.at).toLocaleDateString()}</span>
-     <span style="flex:1"></span><button data-s="short" data-id="${esc(r.id)}">${r.status==='short'?'Unshortlist':'Shortlist'}</button><button data-s="rej" data-id="${esc(r.id)}">${r.status==='rej'?'Restore':'Not selected'}</button></div></div>`}).join(''):'<div class="note">No applications yet. Share the link: stark-91dfe.web.app/apply</div>'}
+    <div class="meta"><span>${esc(PR[r.prog]||r.prog)}</span><span>${esc(TR[r.track]||r.track)}</span>${r.gpa?`<span>GPA ${esc(r.gpa)}</span>`:''}${r.grad?`<span>grad ${esc(r.grad)}</span>`:''}${/^https?:\/\//i.test(r.cv||'')?`<a href="${esc(r.cv)}" target="_blank" rel="noopener noreferrer">CV / LinkedIn</a>`:''}<span class="mono">${esc(r.email)}</span>${r.phone?`<span class="mono">${esc(r.phone)}</span>`:''}<span>${Math.round((r.secs||0)/60)} min · ${new Date(r.at).toLocaleDateString()}</span>
+     <span style="flex:1"></span><button data-s="short" data-id="${esc(r.id)}">${r.status==='short'?'Unshortlist':'Shortlist'}</button><button data-s="rej" data-id="${esc(r.id)}">${r.status==='rej'?'Restore':'Not selected'}</button></div>${r.why?`<p class="why">${esc(r.why)}</p>`:''}</div>`}).join(''):'<div class="note">No applications yet. Share the link: stark-91dfe.web.app/apply</div>'}
   <p style="color:var(--mut);font-size:12px;margin-top:16px">Green bars are the rooms that count double for that applicant's area. ✕ after a number is wrong tries. Scores are computed in the applicant's browser, so confirm the shortlist in the lab round.</p>`;
   wire();document.getElementById('fp').onchange=e=>{fProg=e.target.value;view()};document.getElementById('ft').onchange=e=>{fTrack=e.target.value;view()};document.getElementById('fw').onchange=e=>{weighted=e.target.value==='1';view()};
   app.querySelectorAll('[data-s]').forEach(b=>b.onclick=async()=>{const r=rows.find(x=>x.id===b.dataset.id),s=r.status===b.dataset.s?'':b.dataset.s;b.disabled=true;
     try{await FS.updateDoc(FS.doc(fs,'applicants',r.id),{status:s});r.status=s}catch(e){alert('Could not save: '+e.message)}view()});
   document.getElementById('csv').onclick=async e=>{const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
-    const txt=[['rank','name','email','phone','university','major','year','program','area','fit%','total',...ROOMS,'minutes','status'].join(',')].concat(list.map((r,i)=>[i+1,r.name,r.email,r.phone,r.uni,r.major,r.year,PR[r.prog]||r.prog,TR[r.track]||r.track,r.fit,r.total,...(r.rooms||[]).map(x=>x.score),Math.round((r.secs||0)/60),r.status||''].map(q).join(','))).join('\n');
+    const txt=[['rank','name','email','phone','university','major','year','gpa','graduation','cv','why','program','area','fit%','total',...ROOMS,'minutes','status'].join(',')].concat(list.map((r,i)=>[i+1,r.name,r.email,r.phone,r.uni,r.major,r.year,r.gpa,r.grad,r.cv,r.why,PR[r.prog]||r.prog,TR[r.track]||r.track,r.fit,r.total,...(r.rooms||[]).map(x=>x.score),Math.round((r.secs||0)/60),r.status||''].map(q).join(','))).join('\n');
     try{await navigator.clipboard.writeText(txt);e.target.textContent='Copied'}catch(_){e.target.textContent='Copy failed'}setTimeout(()=>e.target.textContent='Copy as CSV',1600)};
 }
 async function loadAll(){app.innerHTML='<div class="note">Loading applications…</div>';

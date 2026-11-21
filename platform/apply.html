@@ -25,7 +25,7 @@ h2{font:700 22px Inter;margin:0 0 6px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:16px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:600px){.grid{grid-template-columns:1fr}}
 label.f{display:block;font:600 12px Inter;color:var(--mut);margin:0 0 5px}
-input,select{width:100%;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font:15px Inter}
+input,select,textarea{width:100%;background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font:15px Inter}
 input:focus,select:focus{outline:2px solid #E8B04A88;outline-offset:1px}
 .btn{background:var(--gold);color:#2A1607;border:0;border-radius:10px;padding:12px 18px;font:700 15px Inter;cursor:pointer}
 .btn:disabled{opacity:.45;cursor:not-allowed}
@@ -107,7 +107,11 @@ function intro(){
     <div><label class="f" for="f_major">Major</label><input id="f_major" maxlength="80" placeholder="e.g. Mechanical Engineering"></div>
     <div><label class="f" for="f_year">Year of study</label><select id="f_year"><option value="">Choose</option><option>2nd year</option><option>3rd year</option><option>4th year</option><option>5th year</option><option>Graduate</option><option>Other</option></select></div>
     <div><label class="f" for="f_prog">Applying for</label><select id="f_prog"><option value="">Choose</option><option value="coop-next">Co-op, starting next semester (6 months)</option><option value="summer">Summer internship</option><option value="coop-summer">Co-op, starting in summer (6 months)</option><option value="club">Join the STARK club (no test needed)</option></select></div>
-    <div><label class="f" for="f_track">Area you want to work in</label><select id="f_track"><option value="">Choose</option><option value="automation">Automation and PLCs</option><option value="robotics">Robotics software</option><option value="mechanical">Mechanical design and prototyping</option><option value="twin">Digital twin and software</option><option value="unsure">Not sure yet</option></select></div>
+    <div><label class="f" for="f_track">Area you want to work in</label><select id="f_track"><option value="">Choose</option><option value="automation">Automation and PLCs</option><option value="robotics">Robotics software</option><option value="mechanical">Mechanical design and prototyping</option><option value="twin">Digital twin and software</option><option value="process">Process control and instrumentation</option><option value="unsure">Not sure yet</option></select></div>
+    <div><label class="f" for="f_gpa">GPA (optional)</label><input id="f_gpa" maxlength="12" placeholder="e.g. 4.6 out of 5" style="direction:ltr"></div>
+    <div><label class="f" for="f_grad">Expected graduation (optional)</label><input id="f_grad" maxlength="30" placeholder="e.g. Spring 2027"></div>
+    <div style="grid-column:1/-1"><label class="f" for="f_cv">CV or LinkedIn link (optional)</label><input id="f_cv" type="url" maxlength="200" placeholder="https://" style="direction:ltr"></div>
+    <div style="grid-column:1/-1"><label class="f" for="f_why">Why STARK, and what have you built before? (optional)</label><textarea id="f_why" maxlength="500" rows="3" style="resize:vertical" placeholder="A few lines are enough."></textarea></div>
    </div>
    <label class="row" style="margin-top:14px;font-size:13px;color:var(--mut);align-items:flex-start"><input type="checkbox" id="f_ok" style="width:auto;margin-top:3px"> <span style="flex:1">I will solve this on my own, and I agree that STARK stores these details and my results to select candidates.</span></label>
    <div class="msg no" id="f_msg"></div>
@@ -122,10 +126,12 @@ function intro(){
     const bad=t=>{m.textContent=t;m.classList.add('show')};
     if(v('f_name').length<3)return bad('Enter your full name.');
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))return bad('Enter a valid email.');
-    if(!v('f_uni')||!v('f_major')||!v('f_year')||!v('f_prog')||!v('f_track'))return bad('Fill in every field (mobile is optional).');
+    if(!v('f_uni')||!v('f_major')||!v('f_year')||!v('f_prog')||!v('f_track'))return bad('Fill in every field not marked optional.');
+    const cv=v('f_cv');if(cv&&!/^https?:\/\/\S+\.\S+/i.test(cv))return bad('The CV or LinkedIn link should start with https://');
+    const extra={gpa:v('f_gpa').slice(0,12),grad:v('f_grad').slice(0,30),cv:cv.slice(0,200),why:v('f_why').slice(0,500)};
     if(!$('f_ok').checked)return bad('Tick the box to continue.');
-    if(v('f_prog')==='club')return joinClub({name:v('f_name'),email:e,phone:v('f_phone'),uni:v('f_uni'),major:v('f_major'),year:v('f_year'),prog:'club',track:v('f_track')});
-    S={who:{name:v('f_name'),email:e,phone:v('f_phone'),uni:v('f_uni'),major:v('f_major'),year:v('f_year'),prog:v('f_prog'),track:v('f_track')},seed:(Math.random()*2**31)|0,t0:now(),room:0,res:[],done:false,sent:false};
+    if(v('f_prog')==='club')return joinClub({name:v('f_name'),email:e,phone:v('f_phone'),uni:v('f_uni'),major:v('f_major'),year:v('f_year'),prog:'club',track:v('f_track'),...extra});
+    S={who:{name:v('f_name'),email:e,phone:v('f_phone'),uni:v('f_uni'),major:v('f_major'),year:v('f_year'),prog:v('f_prog'),track:v('f_track'),...extra},seed:(Math.random()*2**31)|0,t0:now(),room:0,res:[],done:false,sent:false};
     save();startClock();enter()};
 }
 
@@ -387,7 +393,7 @@ function roomSeq(){
 async function fsdb(){const A=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');const FS=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
   let ap;try{ap=A.getApp('apply')}catch(e){ap=A.initializeApp(window.STARK_FB,'apply')}return{FS,fs:FS.getFirestore(ap)}}
 async function joinClub(who){const b=$('go'),m=$('f_msg');b.disabled=true;b.textContent='Joining…';m.classList.remove('show');
-  try{const {FS,fs}=await fsdb();await FS.setDoc(FS.doc(fs,'club',docId(who.email)),{name:who.name.slice(0,80),email:who.email.slice(0,120),phone:who.phone.slice(0,20),uni:who.uni.slice(0,80),major:who.major.slice(0,80),year:who.year,track:who.track,at:now(),v:1})}
+  try{const {FS,fs}=await fsdb();await FS.setDoc(FS.doc(fs,'club',docId(who.email)),{name:who.name.slice(0,80),email:who.email.slice(0,120),phone:who.phone.slice(0,20),uni:who.uni.slice(0,80),major:who.major.slice(0,80),year:who.year,track:who.track,gpa:who.gpa||'',grad:who.grad||'',cv:who.cv||'',why:who.why||'',at:now(),v:1})}
   catch(e){if(!/permission/i.test(String(e&&(e.code||e.message)))){b.disabled=false;b.textContent='Join the club';m.textContent='Could not sign you up (connection problem). Try again.';m.classList.add('show');return}} // "permission" here means this email is already a member
   S={who,club:true,idle:true,practice:true,room:0,res:[],done:false};save();clubHome()}
 function clubHome(){$('pTime').hidden=true;$('pRoom').hidden=true;
@@ -402,7 +408,7 @@ function startPractice(){Object.assign(S,{seed:(Math.random()*2**31)|0,t0:now(),
 function docId(e){return e.replace(/[^a-z0-9._@-]/g,'_').slice(0,120)}
 async function submit(){
   const total=S.res.reduce((a,r)=>a+r.score,0);
-  const doc={name:S.who.name.slice(0,80),email:S.who.email.slice(0,120),phone:S.who.phone.slice(0,20),uni:S.who.uni.slice(0,80),major:S.who.major.slice(0,80),year:S.who.year,prog:S.who.prog,track:S.who.track,
+  const doc={name:S.who.name.slice(0,80),email:S.who.email.slice(0,120),phone:S.who.phone.slice(0,20),uni:S.who.uni.slice(0,80),major:S.who.major.slice(0,80),year:S.who.year,prog:S.who.prog,track:S.who.track,gpa:S.who.gpa||'',grad:S.who.grad||'',cv:S.who.cv||'',why:S.who.why||'',
     total,rooms:S.res.map(r=>({k:r.k,solved:r.solved,score:r.score,secs:r.secs,wrong:r.wrong,hints:r.hints})),secs:Math.round(((S.t1||now())-S.t0)/1000),at:now(),ua:navigator.userAgent.slice(0,160),v:1};
   const {FS,fs}=await fsdb();
   if(S.practice){await FS.addDoc(FS.collection(fs,'club_runs'),{name:doc.name,email:doc.email,total,rooms:doc.rooms,secs:doc.secs,at:doc.at,v:1});return}
